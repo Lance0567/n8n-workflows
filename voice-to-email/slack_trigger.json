@@ -1,0 +1,551 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": [
+          "app_mention"
+        ],
+        "channelId": {
+          "__rl": true,
+          "value": "C0ARU3X1WR1",
+          "mode": "list",
+          "cachedResultName": "email"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        64,
+        1008
+      ],
+      "id": "304b5678-7006-41e4-8ca8-20cf0b40bc6f",
+      "name": "Slack Trigger",
+      "webhookId": "26f26073-6f3a-43d5-9901-53cd3e2eb160",
+      "credentials": {
+        "slackApi": {
+          "id": "tWX8TSKDLN9KRaEy",
+          "name": "Lance Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Step 1 — Receive\nSlack sends a POST to this URL whenever someone messages the 'email' channel or bot.\n\nAfter that it checks if the message contains an audio file if not the bot will send a warning message.",
+        "height": 716,
+        "width": 404,
+        "color": 4
+      },
+      "id": "fffec3ab-2d62-42fb-85fb-b8aaadf062af",
+      "name": "Sticky Note — Step 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Step 2 — Heads up message & Download\nSlack bot sends a message that its processing the audio file.",
+        "height": 312,
+        "width": 788,
+        "color": 4
+      },
+      "id": "71cdfe44-47a6-4b70-badb-2ce58a653342",
+      "name": "Sticky Note — Step 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Step 3 — Transcribe\nGemini's endpoint is fast (~4–6s) and free-tier generous.\nModel: `gemini-3.0-flash`\nReturns plain text transcript.",
+        "height": 312,
+        "width": 708,
+        "color": 4
+      },
+      "id": "9b9f8fca-acc9-425d-a966-4c98466a10bf",
+      "name": "Sticky Note — Step 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Step 4 — Draft & Parse\nGemini drafts a polished email matching Connor's voice and style. The output is parsed from JSON into structured fields: To, Subject, Body.",
+        "height": 360,
+        "width": 548,
+        "color": 4
+      },
+      "id": "44b046e9-44ba-46f7-b103-223e6748da67",
+      "name": "Sticky Note — Step 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        1088
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Step 5 — Gmail Draft & Notify\nCreates a draft in Connor's Gmail with To, Subject, and Body pre-filled. Once saved, the Slack bot posts the full draft + a direct Gmail link back to the channel.",
+        "height": 360,
+        "width": 580,
+        "color": 4
+      },
+      "id": "59e3e6ee-032d-41d3-aff4-54bca27f0233",
+      "name": "Sticky Note — Step 7",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        1088
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ⚠️ No attachment\nMessage was text-only or wrong event type — silently ignored.",
+        "height": 368,
+        "width": 328,
+        "color": 3
+      },
+      "id": "0cfb9369-c6ac-41bd-80b9-ba0900bd6eac",
+      "name": "Sticky Note — Ignore",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        480,
+        1088
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "inputType": "binary",
+        "binaryPropertyName": "audioData",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        864
+      ],
+      "id": "9c1cb5b6-0bf6-4345-8789-3a36b7530b5e",
+      "name": "Transcribe a recording",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "d0ctxT6j54pcICFs",
+          "name": "Lance Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.1-flash-lite-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3.1-flash-lite-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are Connor's email assistant at MindMaven.\n\nConnor's writing style:\n- Opens with \"Hey [Name],\" — never \"Hi\" or \"Dear\"\n- Warm, direct, genuine — no corporate fluff\n- Em dashes for asides\n- Exclamation points used naturally but sparingly\n- Soft CTAs: \"let me know\" not \"please advise\"\n- Sign-off: must always be on two separate lines — \"Thanks,\" on the first line, then \"Connor\" on the next line. Never \"Thanks, Connor\" on one line.\n\nDraft an email from this voice note transcript:\n{{ $json.content.parts[0].text }}\n\nReturn ONLY a raw JSON object, no markdown fences:\n{\"to\": \"recipient name if mentioned, else empty\", \"subject\": \"subject line\", \"body\": \"full email body with greeting and sign-off\"}\n\nThe body must end exactly like this:\nThanks,\nConnor"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1232
+      ],
+      "id": "323896df-538b-4342-a7a3-7854ac27bb5d",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "maxTries": 5,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "d0ctxT6j54pcICFs",
+          "name": "Lance Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0e4f436f-c1e8-4d30-9bb2-a662d30ea55c",
+              "leftValue": "={{ $json.files }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "f6357e91-c82c-4339-8b4f-2adc70345307",
+              "leftValue": "={{ $json.bot_id }}",
+              "rightValue": "slack_audio",
+              "operator": {
+                "type": "string",
+                "operation": "notExists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        256,
+        1008
+      ],
+      "id": "d79df8a0-aa7c-4661-8b7f-851224c74858",
+      "name": "Query is Audio file?"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ARU3X1WR1",
+          "mode": "list",
+          "cachedResultName": "email"
+        },
+        "text": "Transcribing audio file...",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        544,
+        848
+      ],
+      "id": "fe166f53-ebe0-44f8-8b9d-23f55ee0ff07",
+      "name": "Transcribing",
+      "webhookId": "04221984-ae38-4f4d-bdb4-92ccd8fe8682",
+      "credentials": {
+        "slackApi": {
+          "id": "tWX8TSKDLN9KRaEy",
+          "name": "Lance Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ARU3X1WR1",
+          "mode": "list",
+          "cachedResultName": "email"
+        },
+        "text": "=Hey! It looks like that message didn't include a voice note. \nSend me an audio recording and I'll turn it into a ready-to-send email draft.",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        592,
+        1248
+      ],
+      "id": "f33f302d-fe6a-4023-a9e5-c696f67c765c",
+      "name": "Send Message",
+      "webhookId": "f5a8fe9e-d6ce-4d11-94a0-b61a7a14a595",
+      "credentials": {
+        "slackApi": {
+          "id": "tWX8TSKDLN9KRaEy",
+          "name": "Lance Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.content.parts[0].text || '';\nconst cleaned = raw.replace(/```json|```/g, '').trim();\nconst parsed = JSON.parse(cleaned);\n\nreturn [{\n  json: {\n    to: parsed.to || '',\n    subject: parsed.subject || '(no subject)',\n    body: parsed.body || ''\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        1232
+      ],
+      "id": "90399f21-24a6-4e6d-bfb8-aa84cca2e816",
+      "name": "Parse Gemini output",
+      "notesInFlow": true,
+      "notes": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nitem.binary.audioData.mimeType = 'audio/mp4';\n\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        848
+      ],
+      "id": "188a41c3-19bb-4798-bef8-0aa23f3ffc50",
+      "name": "Fix Mime Type",
+      "notesInFlow": true,
+      "notes": "Code"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Query is Audio file?').item.json.files[0].url_private_download }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "audioData"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        848
+      ],
+      "id": "651c6dd2-8118-43d0-b3b3-298836b5705f",
+      "name": "Download the audio",
+      "notesInFlow": true,
+      "credentials": {
+        "slackApi": {
+          "id": "tWX8TSKDLN9KRaEy",
+          "name": "Lance Slack account"
+        }
+      },
+      "notes": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0ARU3X1WR1",
+          "mode": "list",
+          "cachedResultName": "email"
+        },
+        "text": "=✅ *Email draft ready!*\n\n*To:* {{ $('Parse Gemini output').item.json.to }}\n*Subject:* {{ $('Parse Gemini output').item.json.subject }}\n\n{{ $('Parse Gemini output').item.json.body }}\n\n———\n📬 *Email Draft:* https://mail.google.com/mail/u/0/#drafts/{{ $json.message.id }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1808,
+        1232
+      ],
+      "id": "a31391c7-8c39-46db-8dc9-54cd4b794690",
+      "name": "Send a message",
+      "webhookId": "b21ec785-522b-4ccb-b627-c1dbac186ab8",
+      "credentials": {
+        "slackApi": {
+          "id": "tWX8TSKDLN9KRaEy",
+          "name": "Lance Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        1232
+      ],
+      "id": "78c72f7c-2ba6-4a4f-8fdc-0cf947dd9c81",
+      "name": "Create a Gmail draft",
+      "webhookId": "7043c920-b592-4b97-aeda-6f2e9db1fdb1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "uqqrG1az9Y7IniFC",
+          "name": "Lance Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        864
+      ],
+      "id": "dcdb5a6d-4318-42ee-b41f-3cdbc77cc7f8",
+      "name": "Wait",
+      "webhookId": "316a132a-31b1-40bc-bed1-5cd5278f7114"
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query is Audio file?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query is Audio file?": {
+      "main": [
+        [
+          {
+            "node": "Transcribing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribing": {
+      "main": [
+        [
+          {
+            "node": "Download the audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini output": {
+      "main": [
+        [
+          {
+            "node": "Create a Gmail draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Mime Type": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download the audio": {
+      "main": [
+        [
+          {
+            "node": "Fix Mime Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a Gmail draft": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "175620f65d85c382beafcd6a1f77150118b92d670c1666e0859136dcce0e3b5d"
+  }
+}
