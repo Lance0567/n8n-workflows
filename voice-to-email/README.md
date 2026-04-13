@@ -4,7 +4,7 @@ An end-to-end n8n automation that turns Slack voice notes into polished, style-m
 
 Drop a voice note in Slack → get a ready-to-send email draft in Gmail with a direct link back in the channel.
 
-![Workflow](./assets/images/voice-to-email/workflow.png)
+![Workflow](../assets/images/voice-to-email/workflow.png)
 
 ---
 
