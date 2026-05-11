@@ -1,0 +1,2244 @@
+{
+  "name": "AI-powered HR screening automation via Tally",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "# AI-powered resume screening and candidate email automation\nThis automation helps HR professionals and recruitment teams in handling high application volumes by saving hours on manual review of job applications.\n\n## What It Does: \n1. Candidate fills out a job application (template used from Jotform)\n2. Application receives and triggers this workflow\n3. Candidate's submission and CV gets downloaded and parsed.\n4. AI Agent analyses their CV and profile and checks their compatibility with the job profile.\n5. AI generates detailed analysis of the candidate and puts them under - Strong, Moderate or Weak candidate category\n6. Each candidate receives a personalized email:  - Strong candidate gets a confirmation of their interview date, - Moderate candidate gets a hold request for the job application, - Weak candidate gets rejected with positive feedback\n7. HR gets forwarded with the strong candidate insights like profile details, their strengths, concerns, skills, questions they should ask during the interview etc. on their email inbox",
+        "height": 336,
+        "width": 1184,
+        "color": 6
+      },
+      "id": "34dc69b3-0476-4d21-9d3c-ba394466e501",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        -1568
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "formId": "68rKDP"
+      },
+      "type": "n8n-nodes-tallyforms.tallyTrigger",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        -992
+      ],
+      "id": "3ce7a513-43c7-4546-beac-816439c9f280",
+      "name": "Tally Trigger",
+      "webhookId": "1100253f-6b5a-476f-acf7-80aad195dd8d",
+      "credentials": {
+        "tallyApi": {
+          "id": "7onVehJC9eTX5cDP",
+          "name": "Tally account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Tally Trigger').item.json.question_zza50M.value }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -80,
+        -896
+      ],
+      "id": "687871c6-b88b-459e-b4d3-d7a4c5ad2c23",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        112,
+        -896
+      ],
+      "id": "87a8ba97-703f-41a2-97bd-eab87a33750f",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "==You are an expert technical HR recruiter parsing a resume.\n\nReturn ONLY valid JSON.\nDo NOT use markdown.\nDo NOT wrap in ```json\n```.\nDo NOT add explanations.\n\nOutput must strictly follow this exact JSON structure:\n\n{\n  \"name\": \"\",\n  \"tech_stack\": [],\n  \"programming_languages\": \"Comma separated list of languages\",\n  \"frameworks\": \"Comma separated list of frameworks\",\n  \"databases\": \"Comma separated list of databases\",\n  \"tools\": \"Comma separated list of tools\",\n  \"years_experience\": number,\n  \"education\": \"Highest degree and institution\",\n  \"roles\": [\n    {\n      \"title\": \"\",\n      \"company\": \"\",\n      \"start_date\": \"\",\n      \"end_date\": \"\",\n      \"duration\": \"e.g., 2 years 3 months\",\n      \"key_achievements\": \"A strong, 1-sentence summary of their best achievement here\"\n    }\n  ],\n  \"strengths\": [\"Strength 1\", \"Strength 2\", \"Strength 3\"],\n  \"concerns\": [\"Concern 1 or missing skill\", \"Concern 2\", \"Concern 3\"],\n  \"interview_focus_areas\": [\"Question topic 1\", \"Question topic 2\", \"Question topic 3\"],\n  \"recommendation\": \"1 short sentence recommending how to proceed\",\n  \"overall_assessment\": \"A 2-3 sentence executive summary of the candidate's fit.\"\n}\n\nResume:\n{{$json[\"text\"]}}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        304,
+        -896
+      ],
+      "id": "767126c1-fe81-4e95-8e42-9d0cf277e724",
+      "name": "Extract Contents",
+      "credentials": {
+        "openAiApi": {
+          "id": "rsV7BMsGjPEZ1MLz",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        976,
+        -976
+      ],
+      "id": "5180dbf6-9351-4abc-a946-9c66a0e53141",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json[\"output\"][0][\"content\"][0][\"text\"];\n\n// Remove ```json ``` wrapper\nconst cleaned = raw.replace(/```json|```/g, '').trim();\n\n// Extract JSON safely\nconst jsonMatch = cleaned.match(/\\{[\\s\\S]*\\}/);\n\nif (!jsonMatch) {\n  throw new Error(\"No valid JSON found in AI response\");\n}\n\nreturn [\n  {\n    json: JSON.parse(jsonMatch[0])\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        -1136
+      ],
+      "id": "265f9598-c4cf-4a2e-8de6-f29a64b4706f",
+      "name": "Parse AI Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f688eb6c-4398-41b5-83b8-0b6f3c4eb760",
+              "leftValue": "={{ $('3. Package ATS Data').item.json.evaluation.qualification }}",
+              "rightValue": "Passed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2448,
+        -976
+      ],
+      "id": "a4d161be-5ddf-43cd-a0d4-d6b22cf97c50",
+      "name": "Check Qualification"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Tally Trigger').item.json.question_zza50M.value }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2704,
+        -1104
+      ],
+      "id": "5fa3264a-1c3b-4fc3-94ab-73ab2900dd2c",
+      "name": "Get Resume file"
+    },
+    {
+      "parameters": {
+        "name": "={{ $('3. Package ATS Data').item.json.name }} - Resume.pdf",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{ $('3. Package ATS Data').item.json.evaluation.upload_folder_id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2896,
+        -1104
+      ],
+      "id": "5923ac58-a702-417c-9d68-098888bdac33",
+      "name": "Upload Resume file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "kTD8cxThOWQrQEHr",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1l3vEALXC24CWOp8p8jVzUtg230HsbxMoOME1t-IB1s4",
+          "mode": "list",
+          "cachedResultName": "Applicants Tracking",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l3vEALXC24CWOp8p8jVzUtg230HsbxMoOME1t-IB1s4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('3. Package ATS Data').item.json.evaluation.upload_sheet_id }}",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date Applied": "={{ $('3. Package ATS Data').item.json['Date Applied'] }}",
+            "Email": "={{ $('Normalize Input').item.json.Email }}",
+            "Phone number": "={{ \"'\" + $('Normalize Input').item.json['Phone Number'] }}",
+            "Qualification": "={{ $('3. Package ATS Data').item.json.evaluation.qualification }}",
+            "Score": "={{ $('3. Package ATS Data').item.json.evaluation.score }}",
+            "Candidate Level": "={{ $('3. Package ATS Data').item.json.evaluation.tier }}",
+            "Experience": "={{ $('3. Package ATS Data').item.json.years_experience }}",
+            "Resume Link": "={{ $json.webViewLink }}",
+            "Overview": "={{ $('Clickup Payload').item.json.overall_assessment }}",
+            "Status": "New",
+            "Full Name": "={{ $('3. Package ATS Data').item.json.name }}",
+            "First Name": "={{ $('3. Package ATS Data').item.json['First Name'] }}",
+            "Last Name": "={{ $('3. Package ATS Data').item.json['Last Name'] }}",
+            "Possible Start Date": "={{ $('3. Package ATS Data').item.json['Possible Start Date'] }}",
+            "Preferred Interview Date": "={{ $('3. Package ATS Data').item.json['Preferred Interview Date'] }}",
+            "Clickup ID": "={{ $('Create a task').item.json.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date Applied",
+              "displayName": "Date Applied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone number",
+              "displayName": "Phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qualification",
+              "displayName": "Qualification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Candidate Level",
+              "displayName": "Candidate Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Overview",
+              "displayName": "Overview",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Resume Link",
+              "displayName": "Resume Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Possible Start Date",
+              "displayName": "Possible Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Preferred Interview Date",
+              "displayName": "Preferred Interview Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Clickup ID",
+              "displayName": "Clickup ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3312,
+        -1104
+      ],
+      "id": "d66b390d-fdfe-4286-aedc-16a639fe070f",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Q8e4K9450h27rlma",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3104,
+        -1104
+      ],
+      "id": "18f21ec7-92ab-41f5-9fd7-58dbad1771ba",
+      "name": "Wait",
+      "webhookId": "140cc511-70a4-4ce9-b3fc-5e64658b63a9"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9016288120",
+        "space": "90166915630",
+        "folder": "90169492449",
+        "list": "901614751828",
+        "name": "={{ $json.name }}",
+        "additionalFields": {
+          "customFieldsJson": "={{ $json.clickUpPayload }}",
+          "content": "={{ $json.taskDescription }}",
+          "markdownContent": true,
+          "priority": "={{ $json.calculatedPriorityNative }}"
+        }
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        -976
+      ],
+      "id": "46ea9605-fce9-4198-a2c6-709a36004aa2",
+      "name": "Create a task",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "oSfFdaGLYj4xywls",
+          "name": "ClickUp OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "racutechsoftware@gmail.com",
+        "subject": "=Action Required: Unqualified Applicant Review - {{ $json.name }}",
+        "message": "={{ `Hi HR Team,<br><br>\nAn applicant did not pass the automated qualification check. A task has been generated for them in the Applicants Tracking list.<br><br>\n<b>Please review the candidate's evaluation and send the rejection email.</b><br><br>\n<b>Applicant Task:</b> ${$json.name}<br>\n<b>ClickUp Task Link:</b> <a href=\"${$json.url}\">${$json.url}</a>` }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Lance Esureña"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2976,
+        -752
+      ],
+      "id": "e96570c0-36a3-4123-bf52-8768df79f329",
+      "name": "Send a message to HR",
+      "webhookId": "734d6feb-f61e-4dd1-a7f2-f78e35a97796",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sooaZs3DHjk5D2Ca",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B1QHAS1ED",
+          "mode": "list",
+          "cachedResultName": "recruitment"
+        },
+        "text": "={{ `🚨 *Priority Review Required: Unqualified Applicant* 🚨\\n\\nAn applicant did not pass the automated qualification check and requires HR review to send the rejection email.\\n\\n*Applicant:* ${$json.name}\\n*Applied For:* ${$('3. Package ATS Data').item.json.Position}\\n*AI Score:* ${$('3. Package ATS Data').item.json.evaluation.score}/100\\n\\n👉 <${$json.url}|*Click here to review the candidate in ClickUp*>` }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        2976,
+        -592
+      ],
+      "id": "9a893172-d15c-4fd5-bb1f-9a54cf27bcb5",
+      "name": "Send a Slack Notification",
+      "webhookId": "7f298eb9-8537-417e-a37c-7b2d1171dec7",
+      "credentials": {
+        "slackApi": {
+          "id": "82UoyR3h7ia2WkVC",
+          "name": "HR Bot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "7f3263ee-065d-424c-abde-d2767cbdb936",
+                    "leftValue": "={{ $('3. Package ATS Data').item.json.evaluation.tier }}",
+                    "rightValue": "Strong",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Strong Candidate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('3. Package ATS Data').item.json.evaluation.tier }}",
+                    "rightValue": "Moderate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3baf65b0-98d8-4816-9f7a-931c514dc4f6"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Moderate Candidate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0eb471b0-e106-468a-97b6-314330ca4681",
+                    "leftValue": "={{ $('3. Package ATS Data').item.json.evaluation.tier }}",
+                    "rightValue": "Weak",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Weak Candidate"
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": true
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3552,
+        -1120
+      ],
+      "id": "41efa71e-36d4-4cfe-812b-05cfc34a3f90",
+      "name": "Candidate Level"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B1QHAS1ED",
+          "mode": "list",
+          "cachedResultName": "recruitment"
+        },
+        "text": "={{ `🚨 *FAST-TRACK REQUIRED: Top Candidate* 🚨\\n\\nWe just received a highly qualified application for the *${$('3. Package ATS Data').item.json.Position}* role!\\n\\n*Applicant:* ${$('3. Package ATS Data').item.json.name}\\n*AI Score:* ${$('3. Package ATS Data').item.json.evaluation.score}/100\\n*Experience:* ${$('3. Package ATS Data').item.json.evaluation.experience_status}\\n\\n👉 <${$('Create a task').item.json.url}|*Click here to review in ClickUp & Schedule Interview*>` }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        4032,
+        -1040
+      ],
+      "id": "66510cf6-92b2-4869-8bd5-79f2e07438e9",
+      "name": "Send a Slack Notification1",
+      "webhookId": "7f298eb9-8537-417e-a37c-7b2d1171dec7",
+      "credentials": {
+        "slackApi": {
+          "id": "82UoyR3h7ia2WkVC",
+          "name": "HR Bot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B1QHAS1ED",
+          "mode": "list",
+          "cachedResultName": "recruitment"
+        },
+        "text": "={{ `❌ *UNQUALIFIED: Rejection Needed* ❌\\n\\nAn applicant for *${$('3. Package ATS Data').item.json.Position}* did not pass the automated screening.\\n\\n*Applicant:* ${$('3. Package ATS Data').item.json.name}\\n*AI Score:* ${$('3. Package ATS Data').item.json.evaluation.score}/100\\n*Reason:* ${$('3. Package ATS Data').item.json.evaluation.reason}\\n\\n👉 <${$('Create a task').item.json.url}|*Click here to trigger rejection email in ClickUp*>` }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        4032,
+        -208
+      ],
+      "id": "156a053b-37ee-42f0-b32f-d1445fd4d2a8",
+      "name": "Send a Slack Notification3",
+      "webhookId": "7f298eb9-8537-417e-a37c-7b2d1171dec7",
+      "credentials": {
+        "slackApi": {
+          "id": "82UoyR3h7ia2WkVC",
+          "name": "HR Bot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B1QHAS1ED",
+          "mode": "list",
+          "cachedResultName": "recruitment"
+        },
+        "text": "=={{ `⚖️ *MANUAL REVIEW REQUIRED* ⚖️\\n\\nA new application for *${$('3. Package ATS Data').first().json.Position}* requires a human eye. They have some skills but missed a few core requirements.\\n\\n*Applicant:* ${$('3. Package ATS Data').first().json.name}\\n*AI Score:* ${$('3. Package ATS Data').first().json.evaluation.score}/100\\n*Missing Skills:* ${$('3. Package ATS Data').first().json.evaluation.missing_skills.length > 0 ? $('3. Package ATS Data').first().json.evaluation.missing_skills.join(', ') : 'None'}\\n\\n👉 <${$('Create a task').first().json.url}|*Click here to review resume in ClickUp*>` }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        4032,
+        -640
+      ],
+      "id": "85567df9-b764-4d3d-9f6c-c1aecf4512f9",
+      "name": "Send a Slack Notification2",
+      "webhookId": "3644eb4c-bfa0-4d20-ae6a-552d8d4a5082",
+      "credentials": {
+        "slackApi": {
+          "id": "82UoyR3h7ia2WkVC",
+          "name": "HR Bot Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "racutechsoftware@gmail.com",
+        "subject": "=🌟 FAST-TRACK: Top Candidate for {{ $('3. Package ATS Data').item.json.Position }}",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Candidate Interview Brief</title>\n</head>\n<body style=\"margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;\">\n    <table role=\"presentation\" style=\"width: 100%; border-collapse: collapse; background-color: #f5f5f5;\" cellpadding=\"0\" cellspacing=\"0\">\n        <tr>\n            <td style=\"padding: 40px 10px;\">\n                <table role=\"presentation\" style=\"max-width: 700px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);\" cellpadding=\"0\" cellspacing=\"0\">\n\n                    <!-- Header -->\n                    <tr>\n                        <td style=\"background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 35px 30px; border-radius: 8px 8px 0 0; text-align: center;\">\n                            <h1 style=\"margin: 0; color: #ffffff; font-size: 26px; font-weight: 600;\">🌟 Exceptional Match Found</h1>\n                            <p style=\"margin: 10px 0 0 0; color: #d1fae5; font-size: 16px;\">Top Candidate for {{ $('Tally Trigger').item.json.question_XGKPRL.value }}</p>\n                        </td>\n                    </tr>\n\n                    <!-- Intro -->\n                    <tr>\n                        <td style=\"padding: 30px 30px 10px 30px;\">\n                            <p style=\"margin: 0 0 15px 0; color: #333333; font-size: 16px; line-height: 1.6;\">\n                                Dear <strong>[HR Manager Name]</strong>,\n                            </p>\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We have a strong candidate ready to be scheduled for an interview. Below is a comprehensive brief generated by our AI assessment to help you prepare for the conversation.\n                            </p>\n                        </td>\n                    </tr>\n\n                    <!-- AI Assessment Summary (Highlight Box) -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <div style=\"background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 4px solid #16a34a; border-radius: 6px; padding: 20px;\">\n                                <p style=\"margin: 0 0 10px 0; color: #166534; font-weight: 600; font-size: 16px;\">🎯 AI Assessment Summary</p>\n                                <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"color: #14532d; font-size: 14px; line-height: 1.6;\">\n                                    <tr>\n                                        <td width=\"50%\" style=\"padding-bottom: 8px;\"><strong>Compatibility Score:</strong> <span style=\"color: #059669; font-size: 16px; font-weight: bold;\">{{ $('3. Package ATS Data').item.json.evaluation.score }}/100</span></td>\n                                        <td width=\"50%\" style=\"padding-bottom: 8px;\"><strong>Recommendation:</strong> {{ $('3. Package ATS Data').item.json.recommendation }}</td>\n                                    </tr>\n                                    <tr>\n                                        <td width=\"50%\"><strong>Years of Experience:</strong> {{ $('3. Package ATS Data').item.json.years_experience }}</td>\n                                        <td width=\"50%\"><strong>Education:</strong> {{ $('3. Package ATS Data').item.json.education }} </td>\n                                    </tr>\n                                </table>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Candidate Information -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;\">\n                                <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">\n                                    📋 Candidate Information\n                                </div>\n                                <div style=\"padding: 20px; color: #4b5563; font-size: 14px; line-height: 1.6;\">\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Name:</strong> {{ $('3. Package ATS Data').item.json.name }}</p>\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Email:</strong> <a href=\"mailto:{{ $('3. Package ATS Data').item.json.Email }}\" style=\"color: #059669; text-decoration: none;\">{{ $('3. Package ATS Data').item.json.Email }}</a></p>\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Phone:</strong> {{ $('3. Package ATS Data').item.json['Phone Number'] }}</p>\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Applied Position:</strong> {{ $('3. Package ATS Data').item.json.Position }}</p>\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Earliest Start Date:</strong> {{ $('3. Package ATS Data').item.json['Possible Start Date'] }}</p>\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Preferred Interview:</strong> {{ $('3. Package ATS Data').item.json['Preferred Interview Date'] }}</p>\n                                    <p style=\"margin: 0 0 8px 0;\"><strong>Application Date:</strong> {{ $('3. Package ATS Data').item.json['Date Applied'] }}</p>\n                                    <p style=\"margin: 15px 0 0 0;\"><a href=\"{{ $('Tally Trigger').item.json.question_zza50M.value }}\" style=\"display: inline-block; background-color: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: 500; font-size: 13px;\">📄 View Original Resume</a></p>\n                                </div>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Two Column Section: Strengths & Technical Skills -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">\n                                <tr>\n                                    <!-- Strengths -->\n                                    <td width=\"48%\" valign=\"top\">\n                                        <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; height: 100%;\">\n                                            <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">💪 Key Strengths</div>\n                                            <div style=\"padding: 15px 20px; color: #4b5563; font-size: 14px; line-height: 1.5;\">\n                                                <ul style=\"margin: 0; padding-left: 20px;\">\n                                                    <li style=\"margin-bottom: 8px;\">{{ $('3. Package ATS Data').item.json.tech_stack[0] }}</li>\n                                                    <li style=\"margin-bottom: 8px;\">{{ $('3. Package ATS Data').item.json.tech_stack[1] }}</li>\n                                                    <li style=\"margin-bottom: 0;\">{{ $('3. Package ATS Data').item.json.tech_stack[2] }}</li>\n                                                </ul>\n                                            </div>\n                                        </div>\n                                    </td>\n                                    <td width=\"4%\"></td>\n                                    <!-- Tech Skills -->\n                                    <td width=\"48%\" valign=\"top\">\n                                        <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; height: 100%;\">\n                                            <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">🛠️ Technical Skills</div>\n                                            <div style=\"padding: 15px 20px; color: #4b5563; font-size: 13px; line-height: 1.5;\">\n                                                <p style=\"margin: 0 0 6px 0;\"><strong>Languages:</strong> {{ $('3. Package ATS Data').item.json.programming_languages }}</p>\n                                                <p style=\"margin: 0 0 6px 0;\"><strong>Frameworks:</strong> {{ $('3. Package ATS Data').item.json.frameworks }}</p>\n                                                <p style=\"margin: 0 0 6px 0;\"><strong>Tools:</strong> {{ $('Clickup Payload').item.json.tools }}</p>\n                                                <p style=\"margin: 0;\"><strong>Databases:</strong> {{ $('3. Package ATS Data').item.json.databases }}</p>\n                                            </div>\n                                        </div>\n                                    </td>\n                                </tr>\n                            </table>\n                        </td>\n                    </tr>\n\n                    <!-- Relevant Experience -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;\">\n                                <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">\n                                    💼 Relevant Experience\n                                </div>\n                                <div style=\"padding: 20px; color: #4b5563; font-size: 14px; line-height: 1.6;\">\n                                    <div style=\"margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #e5e7eb;\">\n                                        <p style=\"margin: 0 0 4px 0; color: #111827; font-weight: 600; font-size: 15px;\">{{ $('3. Package ATS Data').item.json.roles[0].title }} <span style=\"font-weight: normal; color: #6b7280; font-size: 13px;\">| {{ $('3. Package ATS Data').item.json.roles[0].start_date }} - {{ $('3. Package ATS Data').item.json.roles[0].end_date }}</span></p>\n                                        <p style=\"margin: 0 0 8px 0; color: #059669; font-weight: 500;\">{{ $('3. Package ATS Data').item.json.roles[0].company }}</p>\n                                        <p style=\"margin: 0;\"><strong>Key Achievement:</strong> {{ $('3. Package ATS Data').item.json.roles[0].key_achievements }}</p>\n                                    </div>\n                                    <div>\n                                        <p style=\"margin: 0 0 4px 0; color: #111827; font-weight: 600; font-size: 15px;\">{{ $('3. Package ATS Data').item.json.roles[1].title }} <span style=\"font-weight: normal; color: #6b7280; font-size: 13px;\"> | {{ $('3. Package ATS Data').item.json.roles[0].start_date }} - {{ $('3. Package ATS Data').item.json.roles[1].end_date }}</span></p>\n                                        <p style=\"margin: 0 0 8px 0; color: #059669; font-weight: 500;\">{{ $('3. Package ATS Data').item.json.roles[1].company }}</p>\n                                        <p style=\"margin: 0;\"><strong>Key Achievement:</strong> {{ $('3. Package ATS Data').item.json.roles[1].key_achievements }}</p>\n                                    </div>\n                                </div>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Areas of Concern & Focus -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">\n                                <tr>\n                                    <!-- Concerns -->\n                                    <td width=\"48%\" valign=\"top\">\n                                        <div style=\"border: 1px solid #fecaca; border-radius: 6px; background-color: #fff1f2; height: 100%;\">\n                                            <div style=\"padding: 15px 20px; color: #9f1239; font-size: 14px; line-height: 1.5;\">\n                                                <p style=\"margin: 0 0 10px 0; font-weight: 600; font-size: 15px;\">⚠️ Areas of Concern</p>\n                                                <ul style=\"margin: 0; padding-left: 20px;\">\n                                                    <li style=\"margin-bottom: 6px;\">{{ $('Clickup Payload').item.json.concerns[0] }}</li>\n                                                    <li style=\"margin-bottom: 6px;\">{{ $('Clickup Payload').item.json.concerns[1] }}</li>\n                                                    <li style=\"margin-bottom: 0;\">{{ $('Clickup Payload').item.json.concerns[2] }}</li>\n                                                </ul>\n                                            </div>\n                                        </div>\n                                    </td>\n                                    <td width=\"4%\"></td>\n                                    <!-- Focus Areas -->\n                                    <td width=\"48%\" valign=\"top\">\n                                        <div style=\"border: 1px solid #bfdbfe; border-radius: 6px; background-color: #eff6ff; height: 100%;\">\n                                            <div style=\"padding: 15px 20px; color: #1e3a8a; font-size: 14px; line-height: 1.5;\">\n                                                <p style=\"margin: 0 0 10px 0; font-weight: 600; font-size: 15px;\">🎤 Interview Focus Areas</p>\n                                                <ul style=\"margin: 0; padding-left: 20px;\">\n                                                    <li style=\"margin-bottom: 6px;\">{{ $('3. Package ATS Data').item.json.interview_focus_areas[0] }}</li>\n                                                    <li style=\"margin-bottom: 6px;\">{{ $('3. Package ATS Data').item.json.interview_focus_areas[1] }}</li>\n                                                    <li style=\"margin-bottom: 0;\">{{ $('3. Package ATS Data').item.json.interview_focus_areas[2] }}</li>\n                                                </ul>\n                                            </div>\n                                        </div>\n                                    </td>\n                                </tr>\n                            </table>\n                        </td>\n                    </tr>\n\n                    <!-- Cover Letter & Overall Assessment -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-bottom: 20px;\">\n                                <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">\n                                    📊 Overall Assessment\n                                </div>\n                                <div style=\"padding: 20px; color: #4b5563; font-size: 14px; line-height: 1.6;\">\n                                    {{ $('3. Package ATS Data').item.json.overall_assessment }}\n                                </div>\n                            </div>\n                            \n                            <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;\">\n                                <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">\n                                    📝 Cover Letter Excerpt\n                                </div>\n                                <div style=\"padding: 20px; color: #4b5563; font-size: 14px; line-height: 1.6; font-style: italic;\">\n                                    \"{{ $('Tally Trigger').item.json.question_5kyPlZ.value }}\"\n                                </div>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Suggested Questions -->\n                    <tr>\n                        <td style=\"padding: 0 30px 20px 30px;\">\n                            <div style=\"border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;\">\n                                <div style=\"background-color: #f9fafb; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #374151; font-size: 15px;\">\n                                    ❓ Suggested Interview Questions\n                                </div>\n                                <div style=\"padding: 20px; color: #4b5563; font-size: 14px; line-height: 1.6;\">\n                                    \n                                    <p style=\"color: #111827; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;\">Technical Questions</p>\n                                    <ol style=\"margin: 0 0 20px 0; padding-left: 20px;\">\n                                        <li style=\"margin-bottom: 6px;\">Can you walk me through your most complex technical project? What challenges did you face and how did you overcome them?</li>\n                                        <li style=\"margin-bottom: 6px;\">I noticed you have experience with specific technologies from your resume. Can you explain a real-world problem you solved using it?</li>\n                                        <li style=\"margin-bottom: 6px;\">How do you approach debugging when facing a difficult technical issue?</li>\n                                        <li style=\"margin-bottom: 6px;\">Tell me about a time when you had to learn a new technology quickly. What was your approach?</li>\n                                        <li>What's your experience with the key technology for this role? Can you describe how you've used it in production?</li>\n                                    </ol>\n\n                                    <p style=\"color: #111827; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;\">Behavioral Questions</p>\n                                    <ol start=\"6\" style=\"margin: 0 0 20px 0; padding-left: 20px;\">\n                                        <li style=\"margin-bottom: 6px;\">Describe a situation where you disagreed with a team member about a technical decision. How did you handle it?</li>\n                                        <li style=\"margin-bottom: 6px;\">Tell me about a time when you had to meet a tight deadline. How did you prioritize and manage your time?</li>\n                                        <li style=\"margin-bottom: 6px;\">Can you share an example of when you received critical feedback? How did you respond?</li>\n                                        <li style=\"margin-bottom: 6px;\">Describe your ideal team environment and how you contribute to team success.</li>\n                                        <li>Tell me about a project that failed or didn't go as planned. What did you learn?</li>\n                                    </ol>\n\n                                    <p style=\"color: #111827; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;\">Problem-Solving Scenario</p>\n                                    <ol start=\"11\" style=\"margin: 0 0 20px 0; padding-left: 20px;\">\n                                        <li>[Provide a relevant technical problem or case study based on the role]. Ask them to talk through their thought process and approach.</li>\n                                    </ol>\n\n                                    <p style=\"color: #111827; font-weight: 600; margin: 0 0 10px 0; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;\">Motivation & Fit</p>\n                                    <ol start=\"12\" style=\"margin: 0; padding-left: 20px;\">\n                                        <li style=\"margin-bottom: 6px;\">What attracted you to this position and our company?</li>\n                                        <li style=\"margin-bottom: 6px;\">Where do you see yourself growing in the next 2-3 years?</li>\n                                        <li style=\"margin-bottom: 6px;\">What type of projects or work excites you the most?</li>\n                                        <li>What questions do you have for us about the role, team, or company?</li>\n                                    </ol>\n                                </div>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Recommended Next Steps -->\n                    <tr>\n                        <td style=\"padding: 0 30px 30px 30px;\">\n                            <div style=\"background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; border-radius: 6px;\">\n                                <p style=\"margin: 0 0 12px 0; color: #166534; font-weight: 600; font-size: 16px;\">✅ Recommended Next Steps</p>\n                                <ol style=\"margin: 0; padding-left: 20px; color: #14532d; font-size: 14px; line-height: 1.6;\">\n                                    <li style=\"margin-bottom: 6px;\">Schedule interview for <strong>{{ $('3. Package ATS Data').item.json['First Name'] }}</strong> (candidate's preferred time)</li>\n                                    <li style=\"margin-bottom: 6px;\">Send calendar invite with video conferencing link</li>\n                                    <li style=\"margin-bottom: 6px;\">Prepare technical assessment or coding challenge (if applicable)</li>\n                                    <li style=\"margin-bottom: 6px;\">Notify interview panel members</li>\n                                    <li style=\"margin-bottom: 6px;\">Review this brief before the interview</li>\n                                    <li style=\"margin-bottom: 0;\">Candidate confirmation email has been sent - awaiting their response</li>\n                                </ol>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Sign Off -->\n                    <tr>\n                        <td style=\"padding: 0 30px 30px 30px;\">\n                            <div style=\"border-top: 1px solid #e5e7eb; padding-top: 25px;\">\n                                <p style=\"margin: 0 0 15px 0; color: #555555; font-size: 14px; line-height: 1.6;\">\n                                    Please review this information before the interview and let me know if you need any additional details or if you'd like to adjust the interview time.\n                                </p>\n                                <p style=\"margin: 0 0 4px 0; color: #374151; font-size: 14px; font-weight: 600;\">Best regards,</p>\n                                <p style=\"margin: 0 0 4px 0; color: #059669; font-size: 14px; font-weight: 500;\">Automated Recruitment System</p>\n                                <p style=\"margin: 0; color: #6b7280; font-size: 14px;\">[Company Name]</p>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Footer -->\n                    <tr>\n                        <td style=\"background-color: #f9fafb; padding: 20px 30px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;\">\n                            <p style=\"margin: 0; color: #9ca3af; font-size: 11px; text-align: center; line-height: 1.5;\">\n                                This is an automated message generated by our applicant tracking workflow.<br>\n                                For questions, contact: [HR Email]\n                            </p>\n                        </td>\n                    </tr>\n\n                </table>\n            </td>\n        </tr>\n    </table>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Lance Esureña "
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        -1248
+      ],
+      "id": "dede9462-6771-4ec8-a655-6be15dbb1207",
+      "name": "Send a message to HR (Priority)",
+      "webhookId": "206dc186-86e5-4178-9138-51ad4c3dfda3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sooaZs3DHjk5D2Ca",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "racutechsoftware@gmail.com",
+        "subject": "=⚖️ REVIEW REQUIRED: Potential Candidate for {{ $('3. Package ATS Data').item.json.Position }}",
+        "message": "=<div style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; padding: 30px;\">\n  <div style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);\">\n    <div style=\"background-color: #D97706; padding: 25px; text-align: center;\">\n      <h2 style=\"margin: 0; color: #ffffff; font-size: 24px;\">⚖️ Manual Review Required</h2>\n      <p style=\"margin: 5px 0 0 0; color: #fde68a; font-size: 16px;\">Action Required: Assess Missing Skills</p>\n    </div>\n    <div style=\"padding: 30px; color: #374151;\">\n      <p style=\"font-size: 16px; line-height: 1.5;\">Hi HR Team,</p>\n      <p style=\"font-size: 16px; line-height: 1.5;\">An applicant has met some, but not all, of the core requirements for this role. A manual review is needed to determine if they should be moved to the interview stage.</p>\n      \n      <div style=\"background-color: #fffbeb; border-left: 4px solid #D97706; padding: 15px; margin: 25px 0;\">\n        <p style=\"margin: 0 0 10px 0;\"><strong>Applicant:</strong> {{ $('3. Package ATS Data').item.json.name }}</p>\n        <p style=\"margin: 0 0 10px 0;\"><strong>Role:</strong> {{ $('3. Package ATS Data').item.json.Position }}</p>\n        <p style=\"margin: 0 0 10px 0;\"><strong>Score:</strong> <span style=\"color: #D97706; font-weight: bold; font-size: 18px;\">{{ $('3. Package ATS Data').item.json.evaluation.score }}/100</span></p>\n        <p style=\"margin: 0;\"><strong>Missing Skills:</strong> {{ $('3. Package ATS Data').item.json.evaluation.missing_skills.length > 0 ? $('3. Package ATS Data').item.json.evaluation.missing_skills.join(', ') : 'None' }}</p>\n      </div>\n\n      <div style=\"text-align: center; margin-top: 30px;\">\n        <a href=\"{{ $('Tally Trigger').first().json.question_zza50M.value }}\" style=\"background-color: #D97706; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;\">Review Resume</a>\n      </div>\n    </div>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Lance Esureña"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        -848
+      ],
+      "id": "057bca67-b142-4433-8a94-51241cc3872e",
+      "name": "Send a message to HR (Normal)",
+      "webhookId": "206dc186-86e5-4178-9138-51ad4c3dfda3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sooaZs3DHjk5D2Ca",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "racutechsoftware@gmail.com",
+        "subject": "=❌ UNQUALIFIED: Action needed for {{ $('3. Package ATS Data').item.json.Position }}",
+        "message": "=<div style=\"font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; padding: 30px;\">\n  <div style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05);\">\n    <div style=\"background-color: #E11D48; padding: 25px; text-align: center;\">\n      <h2 style=\"margin: 0; color: #ffffff; font-size: 24px;\">❌ Unqualified Applicant</h2>\n      <p style=\"margin: 5px 0 0 0; color: #fecdd3; font-size: 16px;\">Action Required: Send Rejection</p>\n    </div>\n    <div style=\"padding: 30px; color: #374151;\">\n      <p style=\"font-size: 16px; line-height: 1.5;\">Hi HR Team,</p>\n      <p style=\"font-size: 16px; line-height: 1.5;\">An applicant did not pass the automated screening criteria. Please review briefly and trigger the standard rejection correspondence.</p>\n      \n      <div style=\"background-color: #fff1f2; border-left: 4px solid #E11D48; padding: 15px; margin: 25px 0;\">\n        <p style=\"margin: 0 0 10px 0;\"><strong>Applicant:</strong> {{ $('3. Package ATS Data').item.json.name }}</p>\n        <p style=\"margin: 0 0 10px 0;\"><strong>Email:</strong> <a href=\"mailto:{{ $('3. Package ATS Data').item.json.Email }}\">{{ $('3. Package ATS Data').item.json.Email }}</a></p>\n        <p style=\"margin: 0 0 10px 0;\"><strong>Score:</strong> <span style=\"color: #E11D48; font-weight: bold; font-size: 18px;\">{{ $('3. Package ATS Data').item.json.evaluation.score }}/100</span></p>\n        <p style=\"margin: 0;\"><strong>AI Reasoning:</strong> \n  {{ \n    (function() {\n      const evalData = $('3. Package ATS Data').item.json.evaluation;\n      const missing = evalData.missing_skills.length > 0 ? evalData.missing_skills.join(', ') : 'None';\n      const expStatus = evalData.experience_status;\n      \n      if (evalData.missing_skills.length > 0 && expStatus.includes('Needs')) {\n        return `Candidate lacks required experience (${expStatus}) AND is missing core technical skills: ${missing}.`;\n      } else if (evalData.missing_skills.length > 0) {\n        return `Candidate meets experience requirements but is missing critical technical skills: ${missing}.`;\n      } else if (expStatus.includes('Needs')) {\n        return `Candidate has the required skills but lacks necessary tenure (${expStatus}).`;\n      } else {\n        return `Candidate scored low across weighted evaluation metrics.`;\n      }\n    })() \n  }}\n</p>\n      </div>\n\n      <div style=\"text-align: center; margin-top: 30px;\">\n        <a href=\"{{ $('Tally Trigger').first().json.question_zza50M.value }}\" style=\"background-color: #E11D48; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;\">View Original Resume</a>\n      </div>\n    </div>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Lance Esureña"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4032,
+        -432
+      ],
+      "id": "cea018ae-4047-4445-bd85-998a7b46a06b",
+      "name": "Send a message to HR (Low)",
+      "webhookId": "206dc186-86e5-4178-9138-51ad4c3dfda3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sooaZs3DHjk5D2Ca",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## **Tally Form**\n* Create a form on [Tally](https://tally.so/dashboard?partner=nitindixit) (use [Job Application Template](https://tally.so/templates/job-application-form-template/vmZVmD)\n* Get API key → Settings → API\n* Add n8n credentials: **JotForm account**\n* Add form ID in **JotForm Trigger**",
+        "height": 272
+      },
+      "id": "fc1f3280-0d53-49e7-a778-8d5c19245fea",
+      "name": "Sticky Note8",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -624,
+        -1120
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## **OpenAI (AI Analysis)**\n* Get API key from [OpenAI](https://platform.openai.com/)\n* Add n8n credentials: **OpenAI account**\n* Use in **Chat Model** node (default: `gpt-4.1o-mini`)",
+        "height": 176,
+        "width": 288
+      },
+      "id": "04c739d9-ad94-49b4-b003-a0bdf3cea637",
+      "name": "Sticky Note9",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        560,
+        -896
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 5. TIERED HR NOTIFICATIONS\nRoutes formatted HTML emails and Slack alerts based on Strong, Moderate, or Weak categorization.",
+        "height": 1408,
+        "width": 752,
+        "color": 5
+      },
+      "id": "6324f994-1022-485d-a983-3f8c464749c6",
+      "name": "Sticky Note10",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3776,
+        -1376
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## **Gmail & Slack (Email & Channel Automation)**\n**Gmail**\n* Add OAuth2 credentials: **Gmail account**\n* Apply to all **Send Email** nodes\n* Replace placeholders (`[Company Name]`, `[HR Manager Name]`, etc.)\n* Update HR recipient in **Send a message** node\n\n**Slack**\n* Add Access token credentials: **Slack Account**\n* Apply to all **Send Message** nodes\n* Choose slack channel\n* Update the Message content",
+        "height": 304,
+        "width": 544
+      },
+      "id": "7931faff-9b65-42ec-8d22-77df7aefc45c",
+      "name": "Sticky Note11",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4288,
+        -848
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "team": "9016288120",
+        "events": [
+          "taskStatusUpdated",
+          "taskDueDateUpdated"
+        ],
+        "filters": {
+          "folderId": "90169492449",
+          "listId": "901614751828"
+        }
+      },
+      "type": "n8n-nodes-base.clickUpTrigger",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        -176
+      ],
+      "id": "ad6f68d7-a410-4f0b-a3af-ff62cb4fce3c",
+      "name": "ClickUp Task Update Status",
+      "webhookId": "c04915a6-d7d4-4685-a7fe-eeada9e136fd",
+      "credentials": {
+        "clickUpOAuth2Api": {
+          "id": "oSfFdaGLYj4xywls",
+          "name": "ClickUp OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "da060e05-cb6c-4374-b499-07c4f3ada5ba",
+                    "leftValue": "={{ $('Get a task').item.json.status.status }}",
+                    "rightValue": "interviewing",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Interviewing"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Get a task').item.json.status.status }}",
+                    "rightValue": "shortlisted",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "2b3a5e41-4110-46f9-a3d4-66fe0d062149"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Shortlisted"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "36e7e8e4-5914-4dc9-9e49-3c8b8db7d7d0",
+                    "leftValue": "={{ $('Get a task').item.json.status.status }}",
+                    "rightValue": "reserve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Reserve"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3428152c-e8ad-4bf6-bddf-e49de5a6c3c4",
+                    "leftValue": "={{ $('Get a task').item.json.status.status }}",
+                    "rightValue": "rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Rejected"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        -208
+      ],
+      "id": "29a26304-7186-4ca5-a8fa-03342cbb0e1a",
+      "name": "Check Status"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "id": "={{ $json.task_id }}"
+      },
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -176
+      ],
+      "id": "ec2225d5-c8b4-438e-a71f-c728004cd41c",
+      "name": "Get a task",
+      "credentials": {
+        "clickUpApi": {
+          "id": "U2QyURBVZ4OtGRSM",
+          "name": "ClickUp Task Access"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the current item\nconst item = $json;\nconst tallyData = $('Tally Trigger').first().json;\n\n// --- NEW: PRIORITY LOGIC ---\nconst score = item.evaluation?.score || 0;\nlet priorityName = \"Low\";\nlet nativePriority = 4; // Native ClickUp: 1=Urgent, 2=High, 3=Normal, 4=Low\nlet customPriorityIndex = 3; // Custom Dropdown index (0=Urgent, 1=High, etc.)\n\nif (score >= 90) {\n  priorityName = \"Urgent\";\n  nativePriority = 1;\n  customPriorityIndex = 0;\n} else if (score >= 80) {\n  priorityName = \"High\";\n  nativePriority = 2;\n  customPriorityIndex = 1;\n} else if (score >= 75) {\n  priorityName = \"Normal\";\n  nativePriority = 3;\n  customPriorityIndex = 2;\n}\n\n// 1. Build the cleanly formatted Markdown Description\nconst missingSkills = item.evaluation?.missing_skills?.length > 0 \n  ? \"- \" + item.evaluation.missing_skills.join('\\n- ') \n  : \"*None*\";\n\nconst taskDescription = `#### Evaluation Summary\n**Score:** ${item.evaluation?.score || 0}/100\n**Candidate Level:** ${item.evaluation?.tier || \"\"}\n**Experience Status:** ${item.evaluation?.experience_status || \"\"}\n#### Missing Required Skills:\n${missingSkills}\n#### Applicant Details\n**Email:** ${item.Email || \"\"}\n**Phone:** ${item['Phone Number'] || \"\"}\n**Date Applied:** ${item['Date Applied'] || \"\"}\n**Resume URL:** ${tallyData.question_zza50M?.value || \"\"}`;\n\n// --- MAP DROPDOWNS TO INDICES ---\n// Position Dropdown (0 is the first option in ClickUp, 1 is the second, etc.)\nconst positionIndexMap = {\n  \"Software Engineer\": 0,\n  \"AI Developer\": 1,\n  \"AI Engineer\": 2,\n  \"AI Automation Specialist\": 3 \n};\n\n// Candidate Level Dropdown \nconst tierIndexMap = {\n  \"Strong\": 0,\n  \"Moderate\": 1,\n  \"Weak\": 2\n};\n\n// --- BUILD THE PAYLOAD ---\n// We filter out any empty values at the very end so ClickUp doesn't crash on blank values.\nconst clickUpCustomFields = [\n  { \"id\": \"cb5ce372-e476-4930-a208-0187a7b55785\", \"value\": item['First Name'] },   // First Name Field\n  { \"id\": \"eb958b5e-73d5-42e8-bdd5-865734188461\", \"value\": item['Last Name'] },    // Last Name Field\n  { \"id\": \"de8635f1-8b3c-40c8-b41b-dd5362b88817\", \"value\": positionIndexMap[item.Position] },  // Position Field\n  { \"id\": \"a7c619c7-4edb-4daa-8268-5905e3eb7db7\", \"value\": item.Email },    // Email Field\n  { \"id\": \"cd1c8ae0-82ef-4732-81d1-52f92d91875e\", \"value\": item['Phone Number'] },   // Phone Number Field\n  { \"id\": \"388e2c53-20a3-403a-a9aa-4a64caf3f223\", \"value\": parseInt(item.evaluation?.score) },   // Score Field\n  { \"id\": \"afc07cf7-996f-4db1-8253-b641df2e8c6b\", \"value\": item.evaluation?.qualification },      // Qualification Field\n  { \"id\": \"ead7a1aa-bbbf-4dc0-8d5c-4469f5744600\", \"value\": item.evaluation?.overview },    // Overview Field\n  { \"id\": \"39291c43-4480-4bf2-b8f3-ba0c311c175a\", \"value\": tierIndexMap[item.evaluation?.tier] },    // Candidate Level Field\n  { \"id\": \"f59cb836-9210-49bd-b181-1ff3975fae29\", \"value\": item.years_experience !== undefined ? item.years_experience + \" years\" : undefined },   // Experience Field  \n  { \"id\": \"e930b843-64be-4e1a-a7f4-97ff99618ab3\", \"value\": tallyData.question_zza50M?.value },   // Resume Link Field\n  { \"id\": \"0f980d8d-461d-4dcf-a3eb-b1221e432013\", \"value\": tallyData.createdAt ? new Date(tallyData.createdAt).getTime() : undefined },    // Date Applied Field\n  { \"id\": \"d85fd3b7-28b2-4d64-b6df-5a45d0a22227\", \"value\": item['Possible Start Date'] ? new Date(item['Possible Start Date']).getTime() : undefined },   // Possible Start Date Field\n  { \"id\": \"68a3ba77-06ce-49dc-88df-b7a3b91c7a60\", \"value\": item['Preferred Interview Date'] ? new Date(item['Preferred Interview Date']).getTime() : undefined } // Preferred Interview Date Field\n\n].filter(field => field.value !== undefined && field.value !== null && field.value !== \"\" && !Number.isNaN(field.value));\n\n// Attach the payload to the outgoing JSON\nreturn {\n  json: {\n    ...item,\n    calculatedPriorityStr: priorityName,\n    calculatedPriorityNative: nativePriority, // 1, 2, 3, or 4\n    clickUpPayload: JSON.stringify(clickUpCustomFields),\n    taskDescription: taskDescription\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        -976
+      ],
+      "id": "5f052326-8025-4b93-bbc4-a5551e860b7d",
+      "name": "Clickup Payload"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Normalize Input').item.json.Email }}",
+        "subject": "=Thanks for applying {{ $('Normalize Input').item.json.Position }} - [Company Name]",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Application Received - Racutech</title>\n</head>\n<body style=\"margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;\">\n    <table role=\"presentation\" style=\"width: 100%; border-collapse: collapse; background-color: #f5f5f5;\" cellpadding=\"0\" cellspacing=\"0\">\n        <tr>\n            <td style=\"padding: 40px 10px;\">\n                <table role=\"presentation\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);\" cellpadding=\"0\" cellspacing=\"0\">\n\n                    <!-- Header with Placeholder Logo -->\n                    <tr>\n                        <td style=\"padding: 30px 30px 0 30px; text-align: center;\">\n                            <img src=\"https://t4.ftcdn.net/jpg/00/24/48/79/360_F_24487944_nxBNrSS0tJjzuCOF4gaULZ3xdR0ef5tJ.jpg\" alt=\"Racutech Logo\" width=\"200\" style=\"height: auto; font-family: sans-serif; font-size: 15px; color: #333333; display: inline-block;\">\n                        </td>\n                    </tr>\n\n                    <!-- Main Content -->\n                    <tr>\n                        <td style=\"padding: 30px 40px 40px 40px;\">\n                            <p style=\"margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;\">\n                                Hi <strong>{{ $('HTTP Request').item.json['First Name'] }}</strong> 👋,\n                            </p>\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We've received your application for the <strong>{{ $('Normalize Input').item.json.Position }}</strong> position at Racutech. Thanks a lot for your interest in joining our team! We're excited to learn more about you.\n                            </p>\n                            <p style=\"margin: 0 0 25px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We're currently processing high application volumes, but our Talent Acquisition team will review your profile and reach out within the next <strong>5-7 days</strong> with information on the next steps.\n                            </p>\n\n                            <!-- Social / CTA Section (Based on image_7.png) -->\n                            <div style=\"background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 4px;\">\n                                <p style=\"margin: 0 0 15px 0; color: #1e3a8a; font-size: 15px; font-weight: 600;\">\n                                    While you wait, connect with us to see our latest engineering breakthroughs!\n                                </p>\n                                <ul style=\"margin: 0; padding-left: 20px; color: #1e40af; font-size: 14px; line-height: 1.5;\">\n                                    <li style=\"margin-bottom: 8px;\"><a href=\"[Your LinkedIn URL]\" style=\"color: #2563eb; text-decoration: underline;\">LinkedIn</a></li>\n                                    <li style=\"margin-bottom: 8px;\"><a href=\"[Your Twitter/X URL]\" style=\"color: #2563eb; text-decoration: underline;\">Twitter</a></li>\n                                    <li style=\"margin-bottom: 0;\"><a href=\"[Your GitHub URL]\" style=\"color: #2563eb; text-decoration: underline;\">GitHub (See our repos!)</a></li>\n                                </ul>\n                            </div>\n\n                            <p style=\"margin: 25px 0 0 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Warm regards,\n                            </p>\n                            <p style=\"margin: 5px 0 0 0; color: #374151; font-size: 15px; font-weight: 600;\">\n                                Automated Recruitment System\n                            </p>\n                            <p style=\"margin: 0; color: #059669; font-size: 14px; font-weight: 500;\">\n                                [Company Name]\n                            </p>\n                        </td>\n                    </tr>\n\n                    <!-- Footer -->\n                    <tr>\n                        <td style=\"background-color: #f9fafb; padding: 20px 40px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;\">\n                            <p style=\"margin: 0; color: #9ca3af; font-size: 11px; text-align: center; line-height: 1.5;\">\n                                You are receiving this automated confirmation because you applied for a job at [Company].<br>\n                                Please ensure any replies are sent directly to <a href=\"mailto:\" style=\"color: #2563eb; text-decoration: none;\">company@example.email</a>.\n                            </p>\n                        </td>\n                    </tr>\n\n                </table>\n            </td>\n        </tr>\n    </table>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Lance Esureña"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        320,
+        -720
+      ],
+      "id": "56773915-a53b-46a1-9865-1f85539f5650",
+      "name": "Application received",
+      "webhookId": "3b6c31ae-f4ba-479a-836f-2716be4655c9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sooaZs3DHjk5D2Ca",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 1. INPUT & EXTRACTION\nRetrieves form data, downloads the binary PDF, and extracts text for the AI.",
+        "height": 694,
+        "width": 1178,
+        "color": 4
+      },
+      "id": "7a2db866-c729-4fdf-bd61-b54b9e65a651",
+      "name": "Input Module",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        -1216
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 2. AI EVALUATION & DATABASE SYNC\nCalculates scores based on the Racutech Job Dictionary and creates the ClickUp task.",
+        "height": 276,
+        "width": 1460,
+        "color": 6
+      },
+      "id": "c83ff45d-ce26-4d8d-b1d4-3b1c38008540",
+      "name": "Eval Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        880,
+        -1088
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 4. CLOUD STORAGE BACKUP\nSaves the original PDF to Google Drive and logs the candidate in Google Sheets.",
+        "height": 260,
+        "width": 834,
+        "color": 3
+      },
+      "id": "6d6fdbae-229b-4407-954c-0090a8b7b267",
+      "name": "Storage Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2640,
+        -1184
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 3. DISQUALIFICATION ALERTS\nImmediate alerts for candidates who fail the core requirements.",
+        "height": 492,
+        "width": 334,
+        "color": 7
+      },
+      "id": "be8464ba-e5f1-4182-b2b5-7fe8c79cb5df",
+      "name": "Disqual Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2864,
+        -880
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extract Payload').item.json.custom_fields[2].value }}",
+        "subject": "=An update on your application {{ $('Get a task').item.json.custom_fields[8].type_config.options[3].name }}",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Application Update</title>\n</head>\n\n<body\n    style=\"margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;\">\n    <table role=\"presentation\" style=\"width: 100%; border-collapse: collapse; background-color: #f5f5f5;\"\n        cellpadding=\"0\" cellspacing=\"0\">\n        <tr>\n            <td style=\"padding: 40px 20px;\">\n                <table role=\"presentation\"\n                    style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"\n                    cellpadding=\"0\" cellspacing=\"0\">\n\n                    <!-- Header -->\n                    <tr>\n                        <td\n                            style=\"background-color: #2563eb; padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;\">\n                            <h1 style=\"margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;\">Thank You for\n                                Applying</h1>\n                            <p style=\"margin: 10px 0 0 0; color: #e0e7ff; font-size: 16px;\">[Company Name]</p>\n                        </td>\n                    </tr>\n\n                    <!-- Main Content -->\n                    <tr>\n                        <td style=\"padding: 40px 30px;\">\n                            <!-- Greeting -->\n                            <p style=\"margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;\">\n                                Dear <strong>{{ $('Get a task').item.json.custom_fields[4].value }}</strong>,\n                            </p>\n\n                            <!-- Introduction -->\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Thank you for your interest in the <strong>{{ $('Get a task').item.json.custom_fields[8].type_config.options[3].name }}</strong> position at\n                                <strong>[Company Name]</strong> and for taking the time to submit your application. We\n                                truly appreciate the effort you put into applying.\n                            </p>\n\n                            <p style=\"margin: 0 0 25px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                After careful review of your qualifications, we have decided not to move forward with\n                                your application for this particular role at this time. This decision was not made\n                                lightly, as we received applications from many qualified candidates.\n                            </p>\n\n                            <!-- What's Next Section -->\n                            <div\n                                style=\"background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 0 0 25px 0; border-radius: 4px;\">\n                                <p style=\"margin: 0 0 12px 0; color: #1e40af; font-weight: 600; font-size: 16px;\">What's\n                                    Next?</p>\n                                <ul style=\"margin: 0; padding-left: 20px; color: #1e3a8a;\">\n                                    <li style=\"margin-bottom: 10px; line-height: 1.6;\">We encourage you to explore\n                                        <strong>other positions</strong> at [Company Name] that might be a better match\n                                        for your skills</li>\n                                    <li style=\"margin-bottom: 10px; line-height: 1.6;\">We'll keep your resume on file\n                                        for <strong>6 months</strong> and will reach out if a more suitable position\n                                        opens up</li>\n                                    <li style=\"margin-bottom: 0; line-height: 1.6;\">You're welcome to <strong>apply\n                                            again in the future</strong> as you gain additional experience</li>\n                                </ul>\n                            </div>\n\n                            <!-- Other Opportunities -->\n                            <div\n                                style=\"text-align: center; margin: 0 0 25px 0; padding: 20px; background-color: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;\">\n                                <p style=\"margin: 0 0 15px 0; color: #166534; font-size: 15px; font-weight: 600;\">\n                                    🔍 Explore Other Opportunities\n                                </p>\n                                <p style=\"margin: 0 0 15px 0; color: #166534; font-size: 14px; line-height: 1.6;\">\n                                    We have other positions that might interest you based on your background and skills.\n                                </p>\n                                <a href=\"https://company.com/careers\"\n                                    style=\"display: inline-block; background-color: #10b981; color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 14px;\">\n                                    View All Open Positions\n                                </a>\n                            </div>\n\n                            <!-- Resources Section -->\n                            <div\n                                style=\"background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 0 0 25px 0; border-radius: 4px;\">\n                                <p style=\"margin: 0 0 12px 0; color: #92400e; font-weight: 600; font-size: 16px;\">📚\n                                    Resources to Consider</p>\n                                <p style=\"margin: 0 0 10px 0; color: #78350f; font-size: 14px; line-height: 1.6;\">\n                                    To build skills relevant to <strong>{{ $('3. Package ATS Data').item.json['First Name'] }}</strong> roles, you might\n                                    explore:\n                                </p>\n                                <ul style=\"margin: 0; padding-left: 20px; color: #78350f;\">\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">Online courses for relevant skills\n                                        (Coursera, Udemy, freeCodeCamp)</li>\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">Contributing to open-source\n                                        projects on GitHub</li>\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">Building a portfolio of relevant\n                                        projects</li>\n                                    <li style=\"margin-bottom: 0; line-height: 1.5;\">Networking with professionals in the\n                                        field on LinkedIn</li>\n                                </ul>\n                            </div>\n\n                            <!-- Closing Message -->\n                            <div\n                                style=\"background-color: #f9fafb; padding: 20px; border-radius: 8px; margin: 0 0 20px 0; border: 1px solid #e5e7eb;\">\n                                <p\n                                    style=\"margin: 0; color: #374151; font-size: 15px; line-height: 1.6; text-align: center; font-style: italic;\">\n                                    We genuinely wish you the best in your job search and career development. Thank you\n                                    again for considering <strong>[Company Name]</strong> as a potential employer.\n                                </p>\n                            </div>\n\n                            <p style=\"margin: 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Best regards,\n                            </p>\n                        </td>\n                    </tr>\n\n                    <!-- Signature -->\n                    <tr>\n                        <td style=\"padding: 0 30px 30px 30px;\">\n                            <div style=\"border-top: 2px solid #e5e7eb; padding-top: 20px;\">\n                                <p style=\"margin: 0 0 5px 0; color: #1f2937; font-size: 16px; font-weight: 600;\">[HR\n                                    Manager Name]</p>\n                                <p style=\"margin: 0 0 5px 0; color: #6b7280; font-size: 14px;\">[Title]</p>\n                                <p style=\"margin: 0 0 5px 0; color: #6b7280; font-size: 14px;\"><strong>[Company\n                                        Name]</strong></p>\n                                <p style=\"margin: 0; color: #6b7280; font-size: 14px;\">\n                                    <a href=\"mailto:[email@company.com]\"\n                                        style=\"color: #6366f1; text-decoration: none;\">[Email]</a> |\n                                    <span>[Phone]</span>\n                                </p>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- Social Media / Stay Connected -->\n                    <tr>\n                        <td\n                            style=\"background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); padding: 25px 30px; text-align: center;\">\n                            <p style=\"margin: 0 0 15px 0; color: #4b5563; font-size: 14px; font-weight: 600;\">\n                                Stay Connected with Us\n                            </p>\n                            <p style=\"margin: 0 0 15px 0; color: #6b7280; font-size: 13px; line-height: 1.5;\">\n                                Follow us for future opportunities and company updates\n                            </p>\n                            <table role=\"presentation\" style=\"margin: 0 auto;\" cellpadding=\"0\" cellspacing=\"0\">\n                                <tr>\n                                    <td style=\"padding: 0 10px;\">\n                                        <a href=\"[LinkedIn URL]\"\n                                            style=\"display: inline-block; background-color: #0077b5; color: #ffffff; text-decoration: none; padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 600;\">\n                                            LinkedIn\n                                        </a>\n                                    </td>\n                                    <td style=\"padding: 0 10px;\">\n                                        <a href=\"[Twitter URL]\"\n                                            style=\"display: inline-block; background-color: #1da1f2; color: #ffffff; text-decoration: none; padding: 8px 20px; border-radius: 4px; font-size: 13px; font-weight: 600;\">\n                                            Twitter\n                                        </a>\n                                    </td>\n                                </tr>\n                            </table>\n                        </td>\n                    </tr>\n\n                    <!-- Footer -->\n                    <tr>\n                        <td\n                            style=\"background-color: #f9fafb; padding: 20px 30px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;\">\n                            <p\n                                style=\"margin: 0; color: #9ca3af; font-size: 11px; text-align: center; line-height: 1.5;\">\n                                © 2025 [Company Name]. All rights reserved.<br>\n                                This email was sent from an automated system. Please do not reply directly to this\n                                message.\n                            </p>\n                        </td>\n                    </tr>\n\n                </table>\n            </td>\n        </tr>\n    </table>\n</body>\n\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Company Name"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        192
+      ],
+      "id": "09060dd8-a273-47b7-a994-940d587011e7",
+      "name": "Email (Rejection)",
+      "webhookId": "722583b1-8773-4bc9-b3f2-8fd137bb9fd2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rcaHZSZYk0ZuAefc",
+          "name": "Company's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 6. CLICKUP STATUS SYNC AUTOMATION\nObserves the ClickUp Board. Moving a candidate triggers automated follow-up emails.",
+        "height": 902,
+        "width": 1476,
+        "color": 4
+      },
+      "id": "a2b97e14-ce23-4dc7-86d7-d474184953fb",
+      "name": "Input Module1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -368,
+        -512
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Main Database\n",
+        "height": 240,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        -1056
+      ],
+      "id": "c19e387c-e784-4918-a8c1-2f21cf85d777",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## Backup Database \n",
+        "height": 240,
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        -1168
+      ],
+      "id": "d975b17c-dbb5-44a8-a58d-3fbe3b57177e",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1l3vEALXC24CWOp8p8jVzUtg230HsbxMoOME1t-IB1s4",
+          "mode": "list",
+          "cachedResultName": "Applicants Tracking",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1l3vEALXC24CWOp8p8jVzUtg230HsbxMoOME1t-IB1s4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $json.targetSheetId }}",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Clickup ID": "={{ $json.id }}",
+            "Full Name": "={{ $json.name }}",
+            "First Name": "={{ $json.custom_fields[4].value }}",
+            "Last Name": "={{ $json.custom_fields[5].value }}",
+            "Status": "={{ $json.formattedStatus }}",
+            "Email": "={{ $json.custom_fields[2].value }}",
+            "Experience": "={{ $json.custom_fields[3].value }}",
+            "Phone number": "={{ $json.custom_fields[7].value }}",
+            "Qualification": "={{ $json.custom_fields[11].value }}",
+            "Score": "={{ $json.custom_fields[13].value }}",
+            "Preferred Interview Date": "={{ $json.interviewDate }}",
+            "Possible Start Date": "={{ $json.startDate }}",
+            "Date Applied": "={{ $json.dateApplied }}"
+          },
+          "matchingColumns": [
+            "Clickup ID"
+          ],
+          "schema": [
+            {
+              "id": "Full Name",
+              "displayName": "Full Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "First Name",
+              "displayName": "First Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Name",
+              "displayName": "Last Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date Applied",
+              "displayName": "Date Applied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone number",
+              "displayName": "Phone number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Qualification",
+              "displayName": "Qualification",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Candidate Level",
+              "displayName": "Candidate Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Experience",
+              "displayName": "Experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Overview",
+              "displayName": "Overview",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Resume Link",
+              "displayName": "Resume Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Possible Start Date",
+              "displayName": "Possible Start Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Preferred Interview Date",
+              "displayName": "Preferred Interview Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Clickup ID",
+              "displayName": "Clickup ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        -176
+      ],
+      "id": "c01b07da-cbe9-4446-af46-5ab96abb67f9",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Q8e4K9450h27rlma",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const task = $json;\n\n// Helper function to format ClickUp timestamps into readable dates (for Sheets)\nfunction formatClickUpDate(fieldId) {\n  const field = task.custom_fields.find(f => f.id === fieldId);\n  if (field && field.value) {\n    const date = new Date(parseInt(field.value));\n    return date.toLocaleDateString('en-US', {\n      month: 'long',\n      day: '2-digit',\n      year: 'numeric'\n    });\n  }\n  return null;\n}\n\n// 1. Extract Email\nconst emailField = task.custom_fields.find(f => f.id === 'a7c619c7-4edb-4daa-8268-5905e3eb7db7');\nconst email = emailField ? emailField.value : null;\n\n// 2. Extract Position Index for Sheet Mapping\nconst posField = task.custom_fields.find(f => f.id === 'de8635f1-8b3c-40c8-b41b-dd5362b88817');\nconst posIndex = posField && posField.value !== undefined ? parseInt(posField.value) : null;\n\nconst sheetMap = {\n  0: \"1864540035\", // Software Engineer\n  1: \"1893627576\", // AI Developer\n  2: \"1310853920\", // AI Engineer\n  3: \"0\"           // AI Automation Specialist\n};\nconst sheetId = sheetMap[posIndex] || \"0\";\n\n// 3. Extract and Format Dates for Sheets\nconst dateApplied = formatClickUpDate('0f980d8d-461d-4dcf-a3eb-b1221e432013');\nconst interviewDate = formatClickUpDate('68a3ba77-06ce-49dc-88df-b7a3b91c7a60');\nconst startDate = formatClickUpDate('d85fd3b7-28b2-4d64-b6df-5a45d0a22227');\n\n// 4. Extract Native ClickUp Dates for Google Calendar\nconst rawStartDate = task.start_date ? parseInt(task.start_date) : null;\nconst rawDueDate = task.due_date ? parseInt(task.due_date) : null;\n\n// Convert to ISO 8601 format required by Google Calendar\nconst calendarStartTime = rawStartDate ? new Date(rawStartDate).toISOString() : null;\n\n// Fallback: If no Due Date is set, default the interview to 1 hour (60 * 60 * 1000 ms)\nconst calendarEndTime = rawDueDate \n  ? new Date(rawDueDate).toISOString() \n  : (rawStartDate ? new Date(rawStartDate + 3600000).toISOString() : null);\n\n// 5. Status Formatting\nconst newStatus = task.status.status;\nconst formattedStatus = newStatus.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');\n\nreturn {\n  json: {\n    ...task,\n    extractedEmail: email,\n    targetSheetId: sheetId,\n    formattedStatus: formattedStatus,\n    dateApplied: dateApplied,\n    interviewDate: interviewDate, \n    startDate: startDate,\n    calendarStartTime: calendarStartTime,\n    calendarEndTime: calendarEndTime\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -176
+      ],
+      "id": "af44fb12-f1ae-4278-a36e-d4cb893f0d1f",
+      "name": "Extract Payload"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $json;\nconst position = item.Position;\n\n// 1. Full Job Descriptions Database\nconst jobDescriptions = {\n\n  \"AI Automation Specialist\": `\nWe’re hiring a Full-Time AI Automation Engineer (Operations & Workflow Systems) who is passionate about AI, automation, and building intelligent systems that improve real-world operations.\n\nThe Role\nTo succeed in this role, it’s important to understand the world of Executive Assistants, Chief of Staffs, founders, and associates. You’ll start by working directly in these operational roles to see how executives spend their time, where bottlenecks occur, and how decisions flow. \n\nKey Responsibilities\n- Support executives and teams in tasks such as inbox management, scheduling, and follow-ups\n- Design, build, and deploy n8n workflows and automation systems\n- Use Claude Code to create skills, run MCP services, and leverage the CLI\n- Integrate tools (Gmail, Slack, Notion, Supabase)\n- Write scripts in JavaScript or Python for custom logic\n\nCore Technical Skills\n- Expert in Claude Code, MCP services, CLI\n- Strong programming knowledge (Python/JS)\n- API knowledge (REST, OAuth, pagination, rate limits)\n- Webhooks and event-driven architecture\n- Automation platforms: n8n (primary), Make/Zapier\n- Supabase, Airtable, Notion database experience\n\nMindset Fit\n- Curious, systems-oriented, high ownership, fast-paced.\n  `,\n\n  \"Software Engineer\": `\nWe are hiring a Full-Time Software Engineer who is passionate about building robust, scalable web applications and intuitive user interfaces.\n\nThe Role\nYou will be responsible for the end-to-end development of internal tools and client-facing web applications. You will bridge the gap between backend data systems and front-end user experiences, ensuring our software is both powerful and highly reliable.\n\nKey Responsibilities\n- Design, develop, and maintain responsive web applications\n- Write clean, maintainable, and well-tested code\n- Collaborate with the design and AI teams to implement new features\n- Optimize applications for maximum speed and scalability\n- Manage database schemas, server-side logic, and API endpoints\n\nCore Technical Skills\n- Expert in modern JavaScript/TypeScript and frameworks (React, Vue, or Angular)\n- Strong backend experience with Node.js, Express, or Laravel\n- Database management (PostgreSQL, MySQL, or MongoDB)\n- Proficiency in version control (Git) and CI/CD pipelines\n- Understanding of cloud deployment (AWS, GCP, or Vercel)\n\nMindset Fit\n- Product-focused, detail-oriented, collaborative, and deeply committed to writing clean code.\n  `,\n\n  \"AI Developer\": `\nWe are looking for an AI Developer to bridge the gap between powerful LLMs and practical business applications. \n\nThe Role\nThis role focuses on rapid prototyping, API integration, prompt engineering, and building agentic wrappers around existing foundation models. You will be turning raw AI capabilities into polished, user-friendly tools that our teams and clients can use daily.\n\nKey Responsibilities\n- Develop and maintain AI wrappers, chatbots, and generative AI features\n- Write, test, and optimize complex system prompts for LLMs (OpenAI, Anthropic)\n- Connect external APIs and internal databases to AI agents via function calling\n- Prototype fast, proof-of-concept AI tools to test new business ideas\n- Monitor AI output quality, cost, and latency\n\nCore Technical Skills\n- Advanced knowledge of Python and FastAPI/Flask\n- Deep experience with OpenAI, Anthropic, and open-source LLM APIs\n- Familiarity with AI orchestration frameworks (LangChain, LlamaIndex)\n- Experience with edge deployment and serverless architectures\n- Strong understanding of prompt engineering and context window management\n\nMindset Fit\n- Hacker mentality, highly adaptive, creative problem solver, and fascinated by generative AI.\n  `,\n\n  \"AI Engineer\": `\nWe are seeking a highly technical AI Engineer to design and implement deep machine learning models, complex RAG (Retrieval-Augmented Generation) pipelines, and enterprise-grade AI infrastructure.\n\nThe Role\nYou will go beyond standard API integrations to build the underlying architecture of our AI systems. You will handle vector databases, semantic search optimization, model fine-tuning, and scalable MLOps environments.\n\nKey Responsibilities\n- Architect and deploy advanced RAG pipelines for secure, internal data querying\n- Fine-tune foundation models (Llama, Mistral) for domain-specific tasks\n- Design data ingestion and chunking strategies for vector databases\n- Optimize machine learning models for inference speed and cost\n- Implement MLOps best practices for monitoring, testing, and deploying models\n\nCore Technical Skills\n- Expert in Python, PyTorch, and/or TensorFlow\n- Deep expertise in Vector Databases (Pinecone, Milvus, Weaviate)\n- Advanced knowledge of embedding models and semantic search techniques\n- Containerization and orchestration (Docker, Kubernetes)\n- Experience with fine-tuning techniques (LoRA, QLoRA)\n\nMindset Fit\n- Deeply analytical, research-driven, focused on optimization, and rigorously data-minded.\n  `\n};\n\n// 2. Folder and Sheet Routing\nconst folderMap = {\n  \"Software Engineer\": \"1wdTFc9pxlN778G82y3JJ83BWEofUyUfE\",\n  \"AI Developer\": \"1_Y-3DshyZQ1pFuXunXG3Ol2GPQhZnfJJ\",\n  \"AI Engineer\": \"1y0NX5KjLeAk5d8b_wsR-pp-jYmNr9uK7\",\n  \"AI Automation Specialist\": \"1rUyr1mmFaIEUANkERLQhReRASyojBv_d\" \n};\nconst sheetMap = {\n  \"Software Engineer\": \"1864540035\", \n  \"AI Developer\": \"1893627576\",\n  \"AI Engineer\": \"1310853920\",\n  \"AI Automation Specialist\": \"0\" \n};\n\n// 3. Package for the AI Node\nreturn {\n  json: {\n    ...item,\n    job_description_text: jobDescriptions[position] || \"Generic technical requirements.\",\n    upload_folder_id: folderMap[position] || \"DEFAULT\",\n    upload_sheet_id: sheetMap[position] || \"DEFAULT\"\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        -976
+      ],
+      "id": "c5d3f55d-4b2b-4432-a029-68c74e668010",
+      "name": "1. Store Job Descriptions"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=You are an expert, highly critical AI Applicant Tracking System (ATS) for a top-tier tech firm. Your job is to aggressively filter candidates. Read the provided Candidate Profile and the official Job Description.\n\nCritically evaluate the candidate's semantic fit, experience, and technical stack against the JD. Do not be generous. If a core skill or exact mindset requirement is missing, deduct points heavily.\n\n### SCORING RUBRIC (STRICTLY ENFORCED)\n- **90-100 (Strong):** An exceptional match. They possess all required core technical skills, meet the experience minimums, and their past roles perfectly align with the \"Mindset Fit\" and \"Key Responsibilities.\"\n- **70-89 (Moderate):** A solid candidate. They have most core technical skills but are missing 1 or 2 specific tools/frameworks, OR their experience is slightly below the requirement. Requires a manual HR review to see if they can learn on the job.\n- **0-69 (Weak):** Disqualified. They are missing major core technical skills (e.g., applying for AI Engineer without PyTorch/Vector DB experience), lack relevant operational immersion, or do not meet experience minimums.\n\nOutput ONLY valid JSON. Do not wrap in markdown or ```json. Use this strict schema:\n{\n  \"score\": number (0-100, strictly following the rubric above),\n  \"tier\": \"Strong\" (if 90-100), \"Moderate\" (if 70-89), or \"Weak\" (if < 70),\n  \"qualification\": \"Passed\" (if Strong or Moderate), or \"Failed\" (if Weak),\n  \"overview\": \"A highly critical 2-sentence explanation of why they received this exact score, directly citing missing or present skills from the JD.\",\n  \"found_skills\": [\"list of JD skills the candidate explicitly possesses\"],\n  \"missing_skills\": [\"list of critical JD skills the candidate completely lacks\"],\n  \"experience_status\": \"Meets requirements\" or \"Lacks specific experience in X\"\n}\n\nJOB DESCRIPTION:\n{{ $json.job_description_text }}\n\nCANDIDATE PROFILE:\n{{ JSON.stringify($json) }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1392,
+        -976
+      ],
+      "id": "e6f22d4c-ed95-4570-810c-72b28523bf70",
+      "name": "2. AI ATS Screener",
+      "credentials": {
+        "openAiApi": {
+          "id": "rsV7BMsGjPEZ1MLz",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve the original candidate data from the first node\nconst candidateData = $('1. Store Job Descriptions').first().json;\n\n// Extract the AI's JSON string\nconst aiResponse = $json.output[0].content[0].text;\nconst cleaned = aiResponse.replace(/```json|```/g, '').trim();\nconst atsEvaluation = JSON.parse(cleaned);\n\n// Rebuild the object exactly how ClickUp, Sheets, and Emails expect it\nreturn {\n  json: {\n    ...candidateData,\n    evaluation: {\n      score: atsEvaluation.score,\n      tier: atsEvaluation.tier,\n      qualification: atsEvaluation.qualification,\n      overview: atsEvaluation.overview,\n      found_skills: atsEvaluation.found_skills,\n      missing_skills: atsEvaluation.missing_skills,\n      experience_status: atsEvaluation.experience_status,\n      upload_folder_id: candidateData.upload_folder_id,\n      upload_sheet_id: candidateData.upload_sheet_id\n    }\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -976
+      ],
+      "id": "a5bd0ed8-ddfe-4934-a9b0-94b2239f3efc",
+      "name": "3. Package ATS Data"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extract Payload').item.json.custom_fields[2].value }}",
+        "subject": "=🎉 Great News About Your Application - {{ $json.custom_fields[8].type_config.options[3].name }} at [Company Name]",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Great News About Your Application!</title>\n</head>\n\n<body\n    style=\"margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;\">\n    <table role=\"presentation\" style=\"width: 100%; border-collapse: collapse; background-color: #f5f5f5;\"\n        cellpadding=\"0\" cellspacing=\"0\">\n        <tr>\n            <td style=\"padding: 40px 20px;\">\n                <table role=\"presentation\"\n                    style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\"\n                    cellpadding=\"0\" cellspacing=\"0\">\n\n                    <!-- Header -->\n                    <tr>\n                        <td\n                            style=\"background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;\">\n                            <div\n                                style=\"background-color: #fbbf24; color: #78350f; display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px;\">\n                                🎉 Great News!\n                            </div>\n                            <h1 style=\"margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;\">Application Update\n                            </h1>\n                            <p style=\"margin: 10px 0 0 0; color: #d1fae5; font-size: 16px;\">[Company Name]</p>\n                        </td>\n                    </tr>\n\n                    <!-- Main Content -->\n                    <tr>\n                        <td style=\"padding: 40px 30px;\">\n                            <!-- Greeting -->\n                            <p style=\"margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;\">\n                                Dear <strong>{{ $('Get a task').item.json.custom_fields[4].value }}</strong>,\n                            </p>\n\n                            <!-- Introduction -->\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Thank you for applying for the <strong>{{ $('Get a task').item.json.custom_fields[8].type_config.options[3].name }}</strong> position at <strong>[Company Name]</strong>! We're excited to inform you\n                                that your application has made a strong impression on our team.\n                            </p>\n\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                After reviewing your resume and cover letter, we're impressed by your qualifications,\n                                we're happy to let you know that you've been shortlisted for the next stage of our hiring process.\n                            </p>\n\n\n\n                            <p style=\"margin: 0 0 25px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We would love to move forward with the interview process!\n                            </p>\n\n                            <!-- Next Steps Section -->\n                            <div style=\"margin: 0 0 25px 0;\">\n                                <h2 style=\"margin: 0 0 15px 0; color: #059669; font-size: 18px; font-weight: 600;\">NEXT\n                                    STEPS:</h2>\n\n                                <p style=\"margin: 0 0 15px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                    We noticed you indicated your preferred interview time as <strong>{{ $('Extract Payload').item.json.interviewDate }}</strong>. We'd be happy\n                                    to accommodate this, or we can offer alternative times if needed.\n                                </p>\n\n                                <p style=\"margin: 0 0 10px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                    Our interview will be approximately 60 minutes\n                                </p>\n\n                                <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                    Please reply to this email with your confirmation, or let us know if you'd like to\n                                    suggest different time slots. We're flexible and want to make this convenient for\n                                    you!\n                                </p>\n                            </div>\n\n                            <!-- What to Expect Section -->\n                            <div\n                                style=\"background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 20px; margin: 0 0 25px 0; border-radius: 4px;\">\n                                <p style=\"margin: 0 0 12px 0; color: #166534; font-weight: 600; font-size: 16px;\">WHAT\n                                    TO EXPECT:</p>\n                                <ul style=\"margin: 0; padding-left: 20px; color: #166534;\">\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">Interview Format: [Video\n                                        call/In-person/Phone]</li>\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">Interviewers: [Names and titles]\n                                    </li>\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">Please prepare to discuss specific\n                                        projects from your resume</li>\n                                    <li style=\"margin-bottom: 0; line-height: 1.5;\">Feel free to ask us questions about\n                                        the role, team, and company culture</li>\n                                </ul>\n                            </div>\n\n                            <!-- Closing -->\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We're looking forward to speaking with you soon!\n                            </p>\n\n                            <p style=\"margin: 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Warm regards,\n                            </p>\n                        </td>\n                    </tr>\n\n                    <!-- Signature -->\n                    <tr>\n                        <td style=\"padding: 0 30px 30px 30px;\">\n                            <div style=\"border-top: 2px solid #e5e7eb; padding-top: 20px;\">\n                                <p style=\"margin: 0 0 5px 0; color: #1f2937; font-size: 16px; font-weight: 600;\">[HR\n                                    Manager Name]</p>\n                                <p style=\"margin: 0 0 5px 0; color: #6b7280; font-size: 14px;\">[Title]</p>\n                                <p style=\"margin: 0 0 5px 0; color: #6b7280; font-size: 14px;\"><strong>[Company\n                                        Name]</strong></p>\n                                <p style=\"margin: 0; color: #6b7280; font-size: 14px;\">\n                                    <a href=\"mailto:[email@company.com]\"\n                                        style=\"color: #10b981; text-decoration: none;\">[Email]</a> |\n                                    <span>[Phone]</span>\n                                </p>\n                            </div>\n                        </td>\n                    </tr>\n\n                    <!-- P.S. Section -->\n                    <tr>\n                        <td style=\"background-color: #eff6ff; padding: 20px 30px; border-top: 1px solid #bfdbfe;\">\n                            <p\n                                style=\"margin: 0; color: #1e40af; font-size: 13px; font-style: italic; line-height: 1.6;\">\n                                <strong>P.S.</strong> If you have any questions before the interview, don't hesitate to\n                                reach out!\n                            </p>\n                        </td>\n                    </tr>\n\n                    <!-- Footer -->\n                    <tr>\n                        <td\n                            style=\"background-color: #f9fafb; padding: 20px 30px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;\">\n                            <p\n                                style=\"margin: 0; color: #9ca3af; font-size: 11px; text-align: center; line-height: 1.5;\">\n                                © 2025 [Company Name]. All rights reserved.\n                            </p>\n                        </td>\n                    </tr>\n\n                </table>\n            </td>\n        </tr>\n    </table>\n</body>\n\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Company Name"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        -192
+      ],
+      "id": "c827c531-1c90-4a5e-b363-610a8b1bf91a",
+      "name": "Email (Shortlisted)",
+      "webhookId": "4a8faf25-070e-4ed0-a29d-c5387b62cc31",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rcaHZSZYk0ZuAefc",
+          "name": "Company's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Extract Payload').item.json.custom_fields[2].value }}",
+        "subject": "=An update on your application {{ $('Get a task').item.json.custom_fields[8].type_config.options[3].name }}",
+        "message": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Application Update</title>\n</head>\n<body style=\"margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;\">\n    <table role=\"presentation\" style=\"width: 100%; border-collapse: collapse; background-color: #f5f5f5;\" cellpadding=\"0\" cellspacing=\"0\">\n        <tr>\n            <td style=\"padding: 40px 20px;\">\n                <table role=\"presentation\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\" cellpadding=\"0\" cellspacing=\"0\">\n                    \n                    <!-- Header -->\n                    <tr>\n                        <td style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 8px 8px 0 0; text-align: center;\">\n                            <h1 style=\"margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;\">Application Update</h1>\n                            <p style=\"margin: 10px 0 0 0; color: #e0e7ff; font-size: 16px;\">[Company Name]</p>\n                        </td>\n                    </tr>\n                    \n                    <!-- Main Content -->\n                    <tr>\n                        <td style=\"padding: 40px 30px;\">\n                            <!-- Greeting -->\n                            <p style=\"margin: 0 0 20px 0; color: #333333; font-size: 16px; line-height: 1.6;\">\n                                Dear <strong>{{ $('Get a task').item.json.custom_fields[4].value }}</strong>,\n                            </p>\n                            \n                            <!-- Introduction -->\n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Thank you for taking the time to apply for the <strong>{{ $('Get a task').item.json.custom_fields[8].type_config.options[3].name }}</strong> position at <strong>[Company Name]</strong>. We appreciate your interest in joining our team.\n                            </p>\n                            \n                            <p style=\"margin: 0 0 20px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We have completed our initial review of your application. Your background shows promise, and we see potential in your profile.\n                            </p>\n                            \n                            <!-- Current Status Section -->\n                            <div style=\"margin: 0 0 25px 0;\">\n                                <h2 style=\"margin: 0 0 12px 0; color: #667eea; font-size: 18px; font-weight: 600;\">Current Status</h2>\n                                <p style=\"margin: 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                    Your application is currently under consideration alongside other candidates. We need a bit more time to complete our assessment process, but we wanted to keep you informed of where things stand.\n                                </p>\n                            </div>\n                            \n                            <!-- Timeline Section -->\n                            <div style=\"background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 0 0 25px 0; border-radius: 4px;\">\n                                <p style=\"margin: 0 0 12px 0; color: #92400e; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;\">Timeline</p>\n                                <ul style=\"margin: 0; padding-left: 20px; color: #78350f;\">\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">We expect to make our decision within the next <strong>5-7 business days</strong></li>\n                                    <li style=\"margin-bottom: 8px; line-height: 1.5;\">If selected to move forward, we'll reach out to schedule an interview</li>\n                                    <li style=\"margin-bottom: 0; line-height: 1.5;\">We will notify all applicants of our final decision regardless of outcome</li>\n                                </ul>\n                            </div>\n                            \n                            <!-- What This Means Section -->\n                            <div style=\"margin: 0 0 25px 0;\">\n                                <h2 style=\"margin: 0 0 12px 0; color: #667eea; font-size: 18px; font-weight: 600;\">What This Means</h2>\n                                <p style=\"margin: 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                    We're carefully evaluating all qualified candidates to find the best fit for both the role and our team. Your application remains active and is receiving full consideration.\n                                </p>\n                            </div>\n                            \n                            <!-- Additional Information Box -->\n                            <div style=\"background-color: #f0fdf4; border: 1px solid #86efac; padding: 20px; margin: 0 0 25px 0; border-radius: 4px;\">\n                                <p style=\"margin: 0 0 12px 0; color: #166534; font-weight: 600; font-size: 15px;\">📎 Have More to Share?</p>\n                                <p style=\"margin: 0 0 10px 0; color: #166534; font-size: 14px; line-height: 1.6;\">\n                                    In the meantime, if you have:\n                                </p>\n                                <ul style=\"margin: 0; padding-left: 20px; color: #166534;\">\n                                    <li style=\"margin-bottom: 6px; line-height: 1.5;\">Additional portfolio work or projects you'd like to share</li>\n                                    <li style=\"margin-bottom: 6px; line-height: 1.5;\">Recent certifications or achievements</li>\n                                    <li style=\"margin-bottom: 0; line-height: 1.5;\">Questions about the role or our company</li>\n                                </ul>\n                                <p style=\"margin: 12px 0 0 0; color: #166534; font-size: 14px; line-height: 1.6;\">\n                                    Please feel free to <strong>reply to this email</strong>. We're happy to review any supplementary materials that might strengthen your application.\n                                </p>\n                            </div>\n                            \n                            <!-- Closing -->\n                            <p style=\"margin: 0 0 10px 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                We appreciate your patience during this process and will be in touch soon.\n                            </p>\n                            \n                            <p style=\"margin: 0; color: #555555; font-size: 15px; line-height: 1.6;\">\n                                Best regards,\n                            </p>\n                        </td>\n                    </tr>\n                    \n                    <!-- Signature -->\n                    <tr>\n                        <td style=\"padding: 0 30px 40px 30px;\">\n                            <div style=\"border-top: 2px solid #e5e7eb; padding-top: 20px;\">\n                                <p style=\"margin: 0 0 5px 0; color: #1f2937; font-size: 16px; font-weight: 600;\">[HR Manager Name]</p>\n                                <p style=\"margin: 0 0 5px 0; color: #6b7280; font-size: 14px;\">[Title]</p>\n                                <p style=\"margin: 0 0 5px 0; color: #6b7280; font-size: 14px;\"><strong>[Company Name]</strong></p>\n                                <p style=\"margin: 0; color: #6b7280; font-size: 14px;\">\n                                    <a href=\"mailto:[email@company.com]\" style=\"color: #667eea; text-decoration: none;\">[Email]</a> | \n                                    <span>[Phone]</span>\n                                </p>\n                            </div>\n                        </td>\n                    </tr>\n                    \n                    <!-- Footer -->\n                    <tr>\n                        <td style=\"background-color: #f9fafb; padding: 25px 30px; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;\">\n                            <p style=\"margin: 0 0 10px 0; color: #6b7280; font-size: 12px; line-height: 1.5; text-align: center;\">\n                                This is an automated message from our applicant tracking system. Please do not reply to this email if you have questions - instead, send a new email to [hr@company.com].\n                            </p>\n                            <p style=\"margin: 0; color: #9ca3af; font-size: 11px; text-align: center;\">\n                                © 2025 [Company Name]. All rights reserved.\n                            </p>\n                        </td>\n                    </tr>\n                    \n                </table>\n            </td>\n        </tr>\n    </table>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "Company Name"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ],
+      "id": "bae2ae52-eaa3-4f3d-b81c-6683dcee9bea",
+      "name": "Email (Consideration)",
+      "webhookId": "722583b1-8773-4bc9-b3f2-8fd137bb9fd2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rcaHZSZYk0ZuAefc",
+          "name": "Company's Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "racutechsoftware@gmail.com",
+          "mode": "id"
+        },
+        "start": "={{ $('Extract Payload').item.json.calendarStartTime }}",
+        "end": "={{ $('Extract Payload').item.json.calendarEndTime }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Extract Payload').item.json.extractedEmail }}",
+            "racutechsoftware@gmail.com"
+          ],
+          "conferenceDataUi": {
+            "conferenceDataValues": {
+              "conferenceSolution": "hangoutsMeet"
+            }
+          },
+          "description": "=<b>When:</b> {{ DateTime.fromISO($('Extract Payload').item.json.calendarStartTime).setZone('Asia/Manila').toFormat(\"EEEE, MMMM dd, 'at' h:mma\") }} - {{ DateTime.fromISO($('Extract Payload').item.json.calendarEndTime).setZone('Asia/Manila').toFormat(\"h:mma '(GMT +08:00)'\") }}\n<b>Location:</b> Remote\n<b>Call link:</b> (Google Meet link attached to this invite)\n<b>Attendees:</b>\n<ul style=\"margin: 0; padding-left: 20px;\"><li>{{ $('Extract Payload').item.json.name }} (needs-action)</li><li>Reeya Liza</li></ul>\n\n<b>Additional details:</b>\nHi {{ $('Extract Payload').item.json.custom_fields[4].value }},\n\nThank you for your interest in applying for the {{ $('Extract Payload').item.json.custom_fields[8].type_config.options[3].name }} role.\n\nWe’d like to invite you for an interview to discuss the role and your experience further. Please see the interview schedule below.\n\n<b>Interview Schedule:</b>\n\nDate/Time: {{ DateTime.fromISO($('Extract Payload').item.json.calendarStartTime).setZone('Asia/Manila').toFormat(\"EEEE, MMMM dd, yyyy, 'at' h:mma 'MNL'\") }}\n\nThank you and looking forward to speaking with you!",
+          "sendUpdates": "all",
+          "showMeAs": "opaque",
+          "summary": "=Interview for {{ $('Extract Payload').item.json.custom_fields[8].type_config.options[3].name }} job at [Company Name] "
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        880,
+        -384
+      ],
+      "id": "ffdd80d5-3eb5-446b-b0d6-e86cf42fa84b",
+      "name": "Send Interview Invitation",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Ba0IYvmWqIIywkrq",
+          "name": "Company Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6de124b2-83ea-4823-8dff-d3839e5cde66",
+              "name": "First Name",
+              "value": "={{ $json.question_MO9pdk.value }}",
+              "type": "string"
+            },
+            {
+              "id": "8f9def5c-9f12-483b-8c40-c105d0317803",
+              "name": "Last Name",
+              "value": "={{ $json.question_JRNvVK.value }}",
+              "type": "string"
+            },
+            {
+              "id": "192e95d0-49d3-4ebd-92f2-e7623160e2d7",
+              "name": "Email",
+              "value": "={{ $json.question_gAR6QD.value }}",
+              "type": "string"
+            },
+            {
+              "id": "f0de2cbd-ba32-4d6b-9afb-df047cc0ca8b",
+              "name": "Phone Number",
+              "value": "={{ $json.question_yyW50X.value }}",
+              "type": "string"
+            },
+            {
+              "id": "d52637ae-81b1-4d2a-b68b-5e8679abe6ed",
+              "name": "=Position",
+              "value": "={{ $json.question_XGKPRL.value }}",
+              "type": "string"
+            },
+            {
+              "id": "68173ffb-763f-4bee-acdd-886e9dc129b1",
+              "name": "Possible Start Date",
+              "value": "={{ DateTime.fromISO($json.question_8k04Jz.value).toFormat('MMMM dd, yyyy') }}",
+              "type": "string"
+            },
+            {
+              "id": "2448e433-7b75-478c-a147-1feab4554d25",
+              "name": "Preferred Interview Date",
+              "value": "={{ DateTime.fromISO($json.question_0MpRbB.value).format('MMMM dd, yyyy') }}",
+              "type": "string"
+            },
+            {
+              "id": "8393e2b2-235e-4f60-890e-34960509f9a5",
+              "name": "Full Name",
+              "value": "={{ $json.question_MO9pdk.value }} {{ $json.question_JRNvVK.value }}",
+              "type": "string"
+            },
+            {
+              "id": "0ad22b37-8125-488f-aa57-5bd447f76f65",
+              "name": "Date Applied",
+              "value": "={{ DateTime.fromISO($json.createdAt).format('MMMM dd, yyyy z') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        -1120
+      ],
+      "id": "db47e9f7-6d46-401c-9ec5-03444bf9f146",
+      "name": "Normalize Input"
+    }
+  ],
+  "pinData": {
+    "Tally Trigger": [
+      {
+        "json": {
+          "id": "9N7OOQQ",
+          "formId": "68rKDP",
+          "formName": "Job Application Form",
+          "respondentId": "aQZLL6q",
+          "createdAt": "2026-05-01T11:19:38.000Z",
+          "question_MO9pdk": {
+            "label": "Name",
+            "value": "Lance Madel",
+            "type": "INPUT_TEXT"
+          },
+          "question_JRNvVK": {
+            "label": "Last Name",
+            "value": "Esureña",
+            "type": "INPUT_TEXT"
+          },
+          "question_gAR6QD": {
+            "label": "Email",
+            "value": "lanceesurena09@gmail.com",
+            "type": "INPUT_TEXT"
+          },
+          "question_yyW50X": {
+            "label": "Phone Number",
+            "value": "+639911441923",
+            "type": "INPUT_PHONE_NUMBER"
+          },
+          "question_XGKPRL": {
+            "label": "Applied Position",
+            "value": "AI Automation Specialist",
+            "type": "DROPDOWN"
+          },
+          "question_8k04Jz": {
+            "label": "Earliest Possible Start Date",
+            "value": "2026-05-12",
+            "type": "INPUT_DATE"
+          },
+          "question_0MpRbB": {
+            "label": "Preferred Interview Date",
+            "value": "2026-05-04",
+            "type": "INPUT_DATE"
+          },
+          "question_zza50M": {
+            "label": "Upload Resume",
+            "value": "https://storage.tally.so/private/LANCE-MADEL-S.-ESURENA-Resume.pdf?id=WZ1x7Q&accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IldaMXg3USIsImZvcm1JZCI6IjY4cktEUCIsImlhdCI6MTc3NzYzNDM3OH0.EZkCX1Nygz7IoUlAHMFELFoKSdivkecm3ll-2_D24jk&signature=0999cef18b07d07d5aa5585b55c93779e6d9b8c867505c2e6609dd4a54e52063",
+            "type": "FILE_UPLOAD"
+          },
+          "question_5kyPlZ": {
+            "label": "Cover Letter",
+            "value": "I can do this job",
+            "type": "TEXTAREA"
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Extract Contents": [
+      {
+        "json": {
+          "output": [
+            {
+              "id": "msg_0531e807d0170d020069fac6abe104819b95d4768c508ba528",
+              "type": "message",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "annotations": [],
+                  "logprobs": [],
+                  "text": "{\n  \"name\": \"Lance Madel S. Esureña\",\n  \"tech_stack\": [\n    \"AI Automation\",\n    \"Full-stack development\",\n    \"Hardware integration\",\n    \"Project management\",\n    \"CI/CD pipelines\",\n    \"Docker\",\n    \"Linux-based Flask servers\",\n    \"NGINX\",\n    \"Cloudflare tunnels\",\n    \"DNS\",\n    \"Gunicorn\",\n    \"RESTful services\",\n    \"Agile methodologies\",\n    \"Unit testing\",\n    \"WordPress\",\n    \"Airtable\",\n    \"Jotform\",\n    \"Make (Integromat)\",\n    \"Cross-platform applications\",\n    \"Hardware biometric integrations\",\n    \"LAN networking\",\n    \"Network setups\",\n    \"Google Cloud Platform\"\n  ],\n  \"programming_languages\": \"Python, C++, Delphi, PHP\",\n  \"frameworks\": \"Flask, Tailwind CSS, Laravel, React\",\n  \"databases\": \"SQL, SQLite, Airtable\",\n  \"tools\": \"Docker, n8n, Gunicorn, Cloudflare, WordPress, Jotform, Make (Integromat)\",\n  \"years_experience\": 3,\n  \"education\": \"Bachelor of Science in Computer Engineering, University of Santo Tomas, Legazpi\",\n  \"roles\": [\n    {\n      \"title\": \"Software Developer\",\n      \"company\": \"Racutech (Self-employed)\",\n      \"start_date\": \"Dec 2024\",\n      \"end_date\": \"Sep 2025\",\n      \"duration\": \"10 months\",\n      \"key_achievements\": \"Co-founded a startup delivering AI automation solutions including a 24/7 AI reservation agent and facial-recognition door system while managing end-to-end full-stack and hardware integration projects.\"\n    },\n    {\n      \"title\": \"Software Developer\",\n      \"company\": \"MindConcept Solutions\",\n      \"start_date\": \"Nov 2022\",\n      \"end_date\": \"May 2025\",\n      \"duration\": \"2 years 7 months\",\n      \"key_achievements\": \"Developed government websites and internal automation workflows, built cross-platform apps with hardware biometrics, and led technical training for end-users.\"\n    },\n    {\n      \"title\": \"Computer Engineer (Intern)\",\n      \"company\": \"University of Santo Tomas - Legazpi, ETC\",\n      \"start_date\": \"Feb 2025\",\n      \"end_date\": \"May 2025\",\n      \"duration\": \"4 months\",\n      \"key_achievements\": \"Designed a WordPress-based centralized helpdesk and provided technical support to improve IT service efficiency across campus.\"\n    }\n  ],\n  \"strengths\": [\n    \"Strong hands-on experience in AI and automation solution development\",\n    \"Proficient with full-stack development and hardware integration\",\n    \"Experience with cloud-based scalable architectures and CI/CD\"\n  ],\n  \"concerns\": [\n    \"Short duration in most roles reflects rapid changes or internships\",\n    \"Limited mention of advanced AI/ML frameworks like TensorFlow or PyTorch\",\n    \"No explicit mention of container orchestration tools like Kubernetes\"\n  ],\n  \"interview_focus_areas\": [\n    \"Experience with AI/ML model deployment and integration\",\n    \"Full-stack system architecture and automation pipelines\",\n    \"Hardware and software integration challenges and solutions\"\n  ],\n  \"recommendation\": \"Proceed with a technical interview focusing on AI automation expertise and end-to-end project management skills.\",\n  \"overall_assessment\": \"Lance is a motivated AI Automation Specialist and Software Engineer with solid experience in delivering full-stack and hardware-integrated automation solutions. His portfolio demonstrates practical implementations with cloud technologies and embedded systems, making him a good fit for roles requiring versatile skills in AI-driven automation and IoT. There are minor gaps in exposure to advanced AI frameworks and orchestration that could be probed during the interview.\"\n}"
+                }
+              ],
+              "role": "assistant"
+            }
+          ]
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Upload Resume file": [
+      {
+        "json": {
+          "kind": "drive#file",
+          "id": "1ixIRlg3hd96Z9V_z_IC9lSGLC4gcyXEY",
+          "name": "Lance Madel S. Esureña - Resume.pdf",
+          "mimeType": "application/pdf",
+          "starred": false,
+          "trashed": false,
+          "explicitlyTrashed": false,
+          "parents": [
+            "1rUyr1mmFaIEUANkERLQhReRASyojBv_d"
+          ],
+          "spaces": [
+            "drive"
+          ],
+          "version": "2",
+          "webContentLink": "https://drive.google.com/uc?id=1ixIRlg3hd96Z9V_z_IC9lSGLC4gcyXEY&export=download",
+          "webViewLink": "https://drive.google.com/file/d/1ixIRlg3hd96Z9V_z_IC9lSGLC4gcyXEY/view?usp=drivesdk",
+          "iconLink": "https://drive-thirdparty.googleusercontent.com/16/type/application/pdf",
+          "hasThumbnail": false,
+          "thumbnailVersion": "0",
+          "viewedByMe": false,
+          "createdTime": "2026-05-06T04:50:15.022Z",
+          "modifiedTime": "2026-05-06T04:50:15.959Z",
+          "modifiedByMeTime": "2026-05-06T04:50:15.959Z",
+          "modifiedByMe": true,
+          "owners": [
+            {
+              "kind": "drive#user",
+              "displayName": "Lance Madel Esureña",
+              "photoLink": "https://lh3.googleusercontent.com/a/ACg8ocJMcHBLcx98J60v4l7R6MpDjaYDYr73KqWhXNXAmonttirDgl8v=s64",
+              "me": true,
+              "permissionId": "18084015826578290496",
+              "emailAddress": "lanceesurena09@gmail.com"
+            }
+          ],
+          "lastModifyingUser": {
+            "kind": "drive#user",
+            "displayName": "Lance Madel Esureña",
+            "photoLink": "https://lh3.googleusercontent.com/a/ACg8ocJMcHBLcx98J60v4l7R6MpDjaYDYr73KqWhXNXAmonttirDgl8v=s64",
+            "me": true,
+            "permissionId": "18084015826578290496",
+            "emailAddress": "lanceesurena09@gmail.com"
+          },
+          "shared": false,
+          "ownedByMe": true,
+          "downloadRestrictions": {
+            "itemDownloadRestriction": {
+              "restrictedForReaders": false,
+              "restrictedForWriters": false
+            },
+            "effectiveDownloadRestrictionWithContext": {
+              "restrictedForReaders": false,
+              "restrictedForWriters": false
+            }
+          },
+          "capabilities": {
+            "canAcceptOwnership": false,
+            "canAddChildren": false,
+            "canAddMyDriveParent": false,
+            "canChangeCopyRequiresWriterPermission": true,
+            "canChangeItemDownloadRestriction": true,
+            "canChangeSecurityUpdateEnabled": false,
+            "canChangeViewersCanCopyContent": true,
+            "canComment": true,
+            "canCopy": true,
+            "canDelete": true,
+            "canDisableInheritedPermissions": false,
+            "canDownload": true,
+            "canEdit": true,
+            "canEnableInheritedPermissions": true,
+            "canListChildren": false,
+            "canModifyContent": true,
+            "canModifyContentRestriction": true,
+            "canModifyEditorContentRestriction": true,
+            "canModifyOwnerContentRestriction": true,
+            "canModifyLabels": false,
+            "canMoveChildrenWithinDrive": false,
+            "canMoveItemIntoTeamDrive": true,
+            "canMoveItemOutOfDrive": true,
+            "canMoveItemWithinDrive": true,
+            "canReadLabels": false,
+            "canReadRevisions": true,
+            "canRemoveChildren": false,
+            "canRemoveContentRestriction": false,
+            "canRemoveMyDriveParent": true,
+            "canRename": true,
+            "canShare": true,
+            "canTrash": true,
+            "canUntrash": true,
+            "canStartApproval": false
+          },
+          "viewersCanCopyContent": true,
+          "copyRequiresWriterPermission": false,
+          "writersCanShare": true,
+          "permissions": [
+            {
+              "kind": "drive#permission",
+              "id": "18084015826578290496",
+              "type": "user",
+              "emailAddress": "lanceesurena09@gmail.com",
+              "role": "owner",
+              "displayName": "lanceesurena09",
+              "deleted": false,
+              "pendingOwner": false
+            }
+          ],
+          "permissionIds": [
+            "18084015826578290496"
+          ],
+          "originalFilename": "Lance Madel S. Esureña - Resume.pdf",
+          "fullFileExtension": "pdf",
+          "fileExtension": "pdf",
+          "md5Checksum": "e9bbf89178bc7406ffc0d35c55975a63",
+          "sha1Checksum": "18eb2c677274401efa41dda6e1077ba38716f054",
+          "sha256Checksum": "dc081f7af7967f4f3229dc8ac610f65e4673550a2921259d17ebd9cd10889e84",
+          "size": "82176",
+          "quotaBytesUsed": "82176",
+          "headRevisionId": "0BwtHEKhvfe2XSXI4NzhLRkVhYW1IeHRUQXY4Q1lyc3o5VkprPQ",
+          "isAppAuthorized": true,
+          "clientEncryptionDetails": {
+            "decryptionMetadata": {
+              "wrappedKey": "",
+              "kaclsId": "0",
+              "aes256GcmChunkSize": "unset",
+              "keyFormat": "unsetKeyFormat",
+              "encryptionResourceKeyHash": ""
+            }
+          },
+          "linkShareMetadata": {
+            "securityUpdateEligible": false,
+            "securityUpdateEnabled": true
+          },
+          "inheritedPermissionsDisabled": false
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Application received",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Contents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Contents": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "1. Store Job Descriptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tally Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Output": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Qualification": {
+      "main": [
+        [
+          {
+            "node": "Get Resume file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message to HR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a Slack Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Resume file": {
+      "main": [
+        [
+          {
+            "node": "Upload Resume file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Resume file": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Candidate Level",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a task": {
+      "main": [
+        [
+          {
+            "node": "Check Qualification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message to HR": {
+      "main": [
+        []
+      ]
+    },
+    "Candidate Level": {
+      "main": [
+        [
+          {
+            "node": "Send a message to HR (Priority)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a Slack Notification1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message to HR (Normal)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a Slack Notification2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message to HR (Low)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a Slack Notification3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message to HR (Priority)": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message to HR (Normal)": {
+      "main": [
+        []
+      ]
+    },
+    "Send a message to HR (Low)": {
+      "main": [
+        []
+      ]
+    },
+    "ClickUp Task Update Status": {
+      "main": [
+        [
+          {
+            "node": "Get a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Status": {
+      "main": [
+        [
+          {
+            "node": "Send Interview Invitation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email (Shortlisted)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email (Consideration)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email (Rejection)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a task": {
+      "main": [
+        [
+          {
+            "node": "Extract Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clickup Payload": {
+      "main": [
+        [
+          {
+            "node": "Create a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Application received": {
+      "main": [
+        []
+      ]
+    },
+    "Email (Rejection)": {
+      "main": [
+        []
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Check Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Payload": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Store Job Descriptions": {
+      "main": [
+        [
+          {
+            "node": "2. AI ATS Screener",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. AI ATS Screener": {
+      "main": [
+        [
+          {
+            "node": "3. Package ATS Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Package ATS Data": {
+      "main": [
+        [
+          {
+            "node": "Clickup Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email (Shortlisted)": {
+      "main": [
+        []
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9af6d780-23e7-4ae1-8010-af8f2b0ab778",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9a9c7e04e25aa292dc8097ab9cb965add003254190ecb85d252e8c90f9e451e9"
+  },
+  "id": "25pUMUEfhUm3BGSr",
+  "tags": []
+}
