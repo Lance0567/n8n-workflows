@@ -1,0 +1,836 @@
+{
+  "name": "AI Expense Tracker Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3ee08dc2-2ce1-471c-8b3f-243d4fd2d787",
+              "name": "content.parts[0].text",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        1216
+      ],
+      "id": "112472cc-daa0-44e4-8c4d-b926509e1a00",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        1216
+      ],
+      "id": "800a63f1-6d70-459a-b330-bef30a738e18",
+      "name": "Transcribe a recording"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "=Logged {{ $('Sanitize Data').item.json.Amount }} for {{ $('Sanitize Data').item.json.Description }} under {{ $('Sanitize Data').item.json.Category }} in the {{ $('Sanitize Data').item.json.routeYear }} log.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        1088
+      ],
+      "id": "90153cd7-e233-4dc6-be5c-7c3a4fe0734c",
+      "name": "Send a text message",
+      "webhookId": "2f280acc-0098-438c-a1f6-729c946b14d8"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "5e8798cb-17f8-42bf-a879-673a69ca961d"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2ccbb29c-5eb5-4824-ace7-6dfe18d5c22c",
+                    "leftValue": "={{ $json.message.voice.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dc9f0230-753d-4c3e-ad08-ea1bb98bf73b",
+                    "leftValue": "={{ $json.message.photo[0].file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -608,
+        1152
+      ],
+      "id": "fb91a241-3c36-45e7-8657-89201578909c",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        96,
+        1408
+      ],
+      "id": "3b7bdc94-dbd9-424a-bc7c-9725335e92e3",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message?.text || $json.content?.parts[0]?.text || $json.content.parts[0].text }}",
+        "options": {
+          "systemMessage": "=## Role\nYou are an Intelligent Financial Strategist and Autonomous Data Extractor. Your goal is to convert multi-modal inputs (Text, Voice, or OCR) into high-precision, structured JSON for a yearly-partitioned database.\n\n## Core Intelligence Guidelines\n1. **Contextual Inference**: \n   - Analyze merchant names and items to infer the category (e.g., \"Savemore\" implies 'Food').\n   - Map all expenses to exactly one: Food, Transport, Bills, Shopping, or Other.\n2. **User-Friendly Descriptions**:\n   - The `description` field should be human-readable and descriptive (e.g., \"Grocery Shopping at Savemore\", \"Commute via Grab\", \"Dinner at Jollibee\").\n3. **Data Normalization**:\n   - Convert all currency (PHP, pesos, P) to the ₱ symbol.\n   - **Date Format**: Always use MM/DD/YYYY (e.g., 01/31/2026).\n   - Resolve relative terms (today/yesterday) using the Reference Context below.\n4. **Noise Resilience**:\n   - Prioritize \"TOTAL\" values. Ignore metadata like TIN#, Permit#, or AuthCodes.\n\n## Multi-Transaction Logic (Critical)\n1. **Single Merchant/Receipt**: If the input is a list of items from ONE merchant, treat it as ONE transaction. Sum the total and return a single JSON Object.\n2. **Bulk/Separate Activities**: If the input describes separate activities or different merchants, treat them as DISTINCT transactions. Return a JSON Array of objects `[{}, {}, {}]`.\n\n## Database Scaling Protocol\n- **Identify Year**: Extract the 4-digit year from the expense date.\n- **Autonomous Provisioning**: Before providing the final output, you MUST call the 'Create_Sheet' tool using the year (e.g., \"2026\") as the title. Ignore errors if it already exists.\n\n## Extraction Schema\neach object must contain:\n- **date**: MM/DD/YYYY\n- **description**: User-friendly summary (e.g., \"[Activity] at [Merchant]\").\n- **amount**: ₱[Number]\n- **category**: (Food, Transport, Bills, Shopping, Other)\n- **raw_message**: Use the template below. **CRITICAL**: The labels MERCHANT, TOTAL, and ITEMS must always be present. Sanitize this field by removing explicit \"Date:\" or \"Time:\" strings.\n  \n  **Template for raw_message**:\n  MERCHANT: [Store Name]\n  TOTAL: [Amount]\n  ITEMS:\n  - [Quantity] x [Item Name] ([Price])\n  \n- **year**: YYYY\n\n## Reference Context\n- Today's Date/Time: {{ $now.toFormat('MM/dd/yyyy - h:mm a') }}\n\n## Final Output Protocol\n- Do NOT include conversational text, markdown headers, or explanations.\n- Output ONLY a valid JSON Object or a JSON Array of Objects."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        96,
+        1136
+      ],
+      "id": "31a79303-3c61-4a36-ba56-2cd439e412fe",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -832,
+        1168
+      ],
+      "id": "5557224e-2e6a-4abb-afe3-eaaf9359c603",
+      "name": "Telegram Trigger",
+      "webhookId": "c14034d6-c35f-440e-be08-8631992ec49c"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        272,
+        1408
+      ],
+      "id": "556e0cf3-5c6b-40d8-a087-6d597a67283d",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -416,
+        1216
+      ],
+      "id": "3f868c6b-b479-4cc3-9a7c-2cd04827ee88",
+      "name": "Get Voice",
+      "webhookId": "f1752007-9885-43ce-9bbf-8a4496122152"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo.reverse()[0].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -416,
+        1392
+      ],
+      "id": "2a0d81a2-f935-411c-b908-9c4a791a4444",
+      "name": "Get a image",
+      "webhookId": "59ee2473-3326-436b-ae91-892b719b8101"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "text": "Extract only the essential purchase data from this receipt. Ignore all tax IDs, permits, address details, and masked card numbers.\n\nFormat your output exactly like this:\nMERCHANT: [Store Name]\nDATE: [Date]\nTOTAL: [Total Amount]\nITEMS:\n- [Quantity] x [Item Name] ([Price])\n\nExample Output:\nMERCHANT: Savemore Market\nDATE: 12/19/2022\nTOTAL: ₱689.75\nITEMS:\n- 1 x FemmeTsu2Ply250 (68.75)\n- 1 x MYSAN SkyFlakes (60.50)",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -256,
+        1392
+      ],
+      "id": "c064658d-06fd-495e-a3a5-e9c7bee2b28e",
+      "name": "Analyze an image"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "84d4e0d7-358c-45f0-b287-e03d5e84e2a1",
+              "name": "content.parts[0].text",
+              "value": "={{ $json.content.parts[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -96,
+        1392
+      ],
+      "id": "16a97327-708f-4f44-93ea-269ef843a4cc",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "content": "### 2. AI Transcription & Vision\nUsing Gemini 2.5 Flash, the workflow transcribes audio or analyzes receipt images. Speech-to-text and Vision-OCR extract high-signal purchase data from metadata noise like tax IDs and permits.",
+        "height": 180,
+        "width": 300,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        848
+      ],
+      "id": "b888c7e1-cd04-4c87-8a9a-19c51e75986e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "### 3. Agentic Intelligence\nThe AI Agent manages complex extraction and autonomous scaling. It resolves relative dates, manages multi-transaction logic (splitting bulk lists into individual items), and executes sheet creation logic based on the transaction year.",
+        "height": 180,
+        "width": 300,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        240,
+        800
+      ],
+      "id": "f3349adc-25c0-4888-93c7-eb7cbf539294",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "### 4. Middleware & Schema Guard\nCustom JavaScript performs row-splitting and sanitization (removing redundant date strings). A Set node enforces a strict 5-column schema, ensuring that the yearly-partitioned Sheets remain clean and optimized for NotebookLM analysis.",
+        "height": 180,
+        "width": 300,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        624,
+        848
+      ],
+      "id": "0bfb4a5d-5c75-4d78-bb22-7c31e07b989b",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "documentId": {
+          "__rl": true,
+          "value": "1qIqN0pwZTi6olNWZj0wCM52jIGOMaSZ_wgCGjjktNwI",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qIqN0pwZTi6olNWZj0wCM52jIGOMaSZ_wgCGjjktNwI/edit?usp=drivesdk"
+        },
+        "title": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('New_Sheet_Year', 'The 4-digit year for the new sheet', 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        1408
+      ],
+      "id": "71c19f2a-6179-4391-bad7-38e0f61c52ec",
+      "name": "Create sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "D25MXAa0Lgi9EuPz",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $input.item.json.output;\n\nfunction extractJSON(text) {\n    try {\n        const arrayMatch = text.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n        if (arrayMatch) return JSON.parse(arrayMatch[0]);\n        const objectMatch = text.match(/\\{[\\s\\S]*\\}/);\n        if (objectMatch) return JSON.parse(objectMatch[0]);\n        return null;\n    } catch (e) { \n        throw new Error(\"Expected JSON but got invalid format.\"); \n    }\n}\n\nlet parsed = extractJSON(aiResponse);\nlet results = Array.isArray(parsed) ? parsed : [parsed];\n\nreturn results.map(data => {\n    let year = data.year;\n    if (!year && data.date) {\n        const parts = data.date.split('/');\n        if (parts.length === 3) year = parts[2];\n    }\n    if (!year) year = new Date().getFullYear().toString();\n\n    const sanitize = (text) => {\n        if (!text) return \"\";\n        return text.toString()\n            .replace(/^DATE:.*$/gm, '')    \n            .replace(/^TIME:.*$/gm, '')    \n            .replace(/\\d{1,2}\\/\\d{1,2}\\/\\d{4}/g, '') \n            .replace(/\\d{1,2}:\\d{2}/g, '')           \n            .replace(/^\\s*[\\r\\n]/gm, '')   \n            .trim();\n    };\n\n    return {\n        json: {\n            \"Date\": data.date || new Date().toLocaleDateString(\"en-US\"),\n            \"Description\": data.description || \"Expense\",\n            \"Amount\": data.amount || \"₱0\",\n            \"Category\": data.category || \"Other\",\n            \"Raw Message\": sanitize(data.raw_message),\n            \"routeYear\": year \n        }\n    };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        1088
+      ],
+      "id": "bddb40f7-0e8e-4be3-b4db-6d5758f34d9d",
+      "name": "Sanitize Data"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1qIqN0pwZTi6olNWZj0wCM52jIGOMaSZ_wgCGjjktNwI",
+          "mode": "list",
+          "cachedResultName": "Expense Tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1qIqN0pwZTi6olNWZj0wCM52jIGOMaSZ_wgCGjjktNwI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "={{ $('Sanitize Data').item.json.routeYear }}",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $json.Date }}",
+            "Description": "={{ $json.Description }}",
+            "Amount": "={{ $json.Amount }}",
+            "Category": "={{ $json.Category }}",
+            "Raw Message": "={{ $json['Raw Message'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Raw Message",
+              "displayName": "Raw Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "routeYear",
+              "displayName": "routeYear",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        1088
+      ],
+      "id": "1e30d325-8832-4745-afed-04b6309456e4",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "content": "### 1. Multi-Modal Trigger & Router\nThis segment detects Telegram message types (Text, Voice, Photo). A Switch node routes them to specialized processing branches, enabling the unified handling of direct entries, audio memos, and physical receipts.",
+        "height": 180,
+        "width": 300
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        880
+      ],
+      "id": "d3860f3b-496f-410a-b17c-85933c120cc5",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "Date",
+              "value": "={{ $json.Date }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "Description",
+              "value": "={{ $json.Description }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "Amount",
+              "value": "={{ $json.Amount }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "Category",
+              "value": "={{ $json.Category }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "Raw Message",
+              "value": "={{ $json['Raw Message'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        1088
+      ],
+      "id": "7cea5946-0cc6-496d-a152-2d809e3d7cf4",
+      "name": "Filter Schema"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c1",
+                    "leftValue": "={{ $json.output.trim().startsWith('{') || $json.output.trim().startsWith('[') }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Financial (JSON)"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c2",
+                    "leftValue": "={{ !($json.output.trim().startsWith('{') || $json.output.trim().startsWith('[')) }}",
+                    "rightValue": "={{ true }}",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Conversational (Text)"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        1136
+      ],
+      "id": "5087b967-4868-4b60-9999-9aeab9ad4b19",
+      "name": "Output Router"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.from.id }}",
+        "text": "={{ $('AI Agent').item.json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        1328
+      ],
+      "id": "93e00e1e-fef2-4d5d-9768-5b19092baa78",
+      "name": "Send Chat Reply",
+      "webhookId": "9e610d71-589a-4ad0-8b73-7bb459fffd0b"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Voice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Output Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voice": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a image": {
+      "main": [
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Data": {
+      "main": [
+        [
+          {
+            "node": "Filter Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Schema": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output Router": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Chat Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "c7119f9f-c404-4e4a-a79d-23c0cd6b0588",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bd29a8c48303fcba96af5951379b38b77fbeaad88b300cccfd62386b1b2ee723"
+  },
+  "id": "7tygG6HR5ZlajBz2",
+  "tags": []
+}
