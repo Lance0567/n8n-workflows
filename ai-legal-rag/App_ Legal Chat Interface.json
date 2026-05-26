@@ -1,0 +1,727 @@
+{
+  "name": "App: Legal Chat Interface",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFile",
+        "fileToWatch": {
+          "__rl": true,
+          "value": "1ah9WeJF1yaCsCiQdl_bhFP-Y_reFher9",
+          "mode": "list",
+          "cachedResultName": "english-ausco-australian-law.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1ah9WeJF1yaCsCiQdl_bhFP-Y_reFher9/view?usp=drivesdk"
+        }
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        352
+      ],
+      "id": "e4a1f22e-b6b9-4d23-a4a2-c5f24c46b676",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REKzv2PnlTi0HNC0",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        784,
+        0
+      ],
+      "id": "b0ce2e22-f078-4d9d-a956-f6fb9c07dc12",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        944,
+        224
+      ],
+      "id": "d751db31-4cbc-4913-ab85-71ed5e281319",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "h6VNqhAJStOvpgdo",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Vector Store",
+        "height": 768,
+        "width": 1956
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        -144
+      ],
+      "id": "dce3e29e-581d-40ee-82b7-1c4e40393325",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to search for context, laws, rules, and general information from my uploaded documents to answer user questions.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n-docs",
+          "mode": "list",
+          "cachedResultName": "n8n-docs"
+        },
+        "topK": 10,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        2176,
+        224
+      ],
+      "id": "6bb5979e-0fd5-4fff-9871-bc877b33dc45",
+      "name": "DB: Retrieve Context",
+      "credentials": {
+        "pineconeApi": {
+          "id": "MkiOQqNlGygoWAMB",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        1984,
+        272
+      ],
+      "id": "95cf94b5-37d0-4ac1-9fd5-3afb972b0693",
+      "name": "Memory: Chat History"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2176,
+        384
+      ],
+      "id": "f2bd7871-20df-446a-aec9-337bac4caef6",
+      "name": "Model: Embed User Query",
+      "credentials": {
+        "openAiApi": {
+          "id": "h6VNqhAJStOvpgdo",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "You are a highly accurate and professional AI assistant. Your primary task is to answer user queries using only the information provided in the retrieved documents.\n\nFollow these strict rules:\n\nAlways use your retrieval tool to search the database before answering.\n\nBase your final answer solely on the context returned by the tool.\n\nIf the retrieved context does not contain the answer to the user's question, clearly state: \"I do not have enough information in my documents to answer that.\"\n\nDo not make up information, guess, or rely on your general training data to fill in gaps."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1888,
+        16
+      ],
+      "id": "1dd7dad2-1de7-49ab-b772-1e2aeab4d415",
+      "name": "Agent: RAG Orchestrator"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1ah9WeJF1yaCsCiQdl_bhFP-Y_reFher9",
+          "mode": "list",
+          "cachedResultName": "english-ausco-australian-law.pdf",
+          "cachedResultUrl": "https://drive.google.com/file/d/1ah9WeJF1yaCsCiQdl_bhFP-Y_reFher9/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        496,
+        256
+      ],
+      "id": "4d56d9b5-0ea3-4f9b-8f87-bd2cb21c0f71",
+      "name": "Fetch: Raw Documents",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "REKzv2PnlTi0HNC0",
+          "name": "Google Drive OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        1136,
+        208
+      ],
+      "id": "e7c13f8a-4ff2-448e-be4a-8b87a033b9a3",
+      "name": "Process: Parse Text"
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        416
+      ],
+      "id": "0cdb462b-54d5-4244-889c-9ef64c6e45a7",
+      "name": "Split: 1000 Chunks / 100 Overlap"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "n8n-docs",
+          "mode": "list",
+          "cachedResultName": "n8n-docs"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        992,
+        0
+      ],
+      "id": "9fae7363-88c9-4ba6-8787-ce063941ac58",
+      "name": "DB: Insert to Pinecone",
+      "credentials": {
+        "pineconeApi": {
+          "id": "MkiOQqNlGygoWAMB",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## RAG AGENT",
+        "height": 768,
+        "width": 1008,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        -144
+      ],
+      "id": "ca34c5ff-358c-49f1-8395-4707083d343e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        0
+      ],
+      "id": "e96f7cd7-3a8a-4d2e-8fbc-84d1bbbd5fb5",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n-docs-f9v2kzt.svc.aped-4627-b74a.pinecone.io/vectors/delete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "pcsk_7JoLyd_SH5ucYQdpSpmJRDZvhqH3qkJuYSjThqSojtKYTEPF1FYS4gKyscoKyf5sS3q4zG"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"deleteAll\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        304,
+        0
+      ],
+      "id": "d6ff1834-7be2-41f3-af53-174a756bc205",
+      "name": "API: Clear Pinecone Index"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        512,
+        0
+      ],
+      "id": "6e61d89c-b409-4ed2-9359-517a02504ac8",
+      "name": "Wait",
+      "webhookId": "7368b5a3-f0ff-49ac-a5ff-8a6afa8edd4c"
+    },
+    {
+      "parameters": {
+        "url": "https://n8n-docs-f9v2kzt.svc.aped-4627-b74a.pinecone.io/describe_index_stats",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "pcsk_7JoLyd_SH5ucYQdpSpmJRDZvhqH3qkJuYSjThqSojtKYTEPF1FYS4gKyscoKyf5sS3q4zG"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "2d05e16d-edeb-42fc-b871-1aea543ba056",
+      "name": "API: Check Vector Count"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f0ba7f68-9ab6-491a-825c-0ff6dacb49c9",
+              "leftValue": "={{ $json.totalVectorCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        64,
+        176
+      ],
+      "id": "58dbd607-3800-4eda-8f88-6468441cbfbf",
+      "name": "Logic: Has Existing Records?"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0B60KZPJTY",
+          "mode": "list",
+          "cachedResultName": "legal-ducoment"
+        },
+        "text": "=The Legal document for Australian law has been updated ✅\n<https://drive.google.com/file/d/1ah9WeJF1yaCsCiQdl_bhFP-Y_reFher9/view?usp=sharing|View the source PDF here>",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1312,
+        0
+      ],
+      "id": "b2f76f45-b2fb-49af-accb-c8865788ae6b",
+      "name": "Notify: Slack Update",
+      "webhookId": "4b2d8da9-6eb8-4984-8ac1-7dc24954f792",
+      "executeOnce": true,
+      "credentials": {
+        "slackApi": {
+          "id": "yfAkomPHKlC3G56L",
+          "name": "Slack Bot for Legal Document account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1840,
+        272
+      ],
+      "id": "46a47e91-d1d0-4e4c-9edb-b483e6fa7f2c",
+      "name": "LLM: gpt-4",
+      "credentials": {
+        "openAiApi": {
+          "id": "h6VNqhAJStOvpgdo",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "legal-chat",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        1664,
+        16
+      ],
+      "id": "190ae501-3406-4d60-85bd-ab40b84afebf",
+      "name": "Webhook",
+      "webhookId": "22611662-d1d5-4535-992c-5457db770d01"
+    },
+    {
+      "parameters": {
+        "path": "legal-bot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        2800,
+        160
+      ],
+      "id": "e5259b2f-d553-408e-898f-492e06645d4a",
+      "name": "Fetch UI Webhook",
+      "webhookId": "da91895a-ffb7-4bc7-b789-205e3473dfde"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Legal Document Assistant | Full System</title>\n    <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap\" rel=\"stylesheet\">\n    <style>\n        :root {\n            --primary-navy: #1a2942;\n            --secondary-navy: #2c3e5d;\n            --accent-gold: #c5a47e;\n            --accent-gold-hover: #b08d65;\n            --bg-page: #eef1f5;\n            --bg-panel: #ffffff;\n            --bg-chat: #f8f9fa;\n            --text-main: #333333;\n            --text-muted: #64748b;\n            --border-color: #e2e8f0;\n        }\n\n        body { \n            font-family: 'Inter', sans-serif; \n            background-color: var(--bg-page); \n            margin: 0;\n            padding: 0;\n            display: flex;\n            flex-direction: column;\n            height: 100vh;\n            overflow: hidden;\n        }\n\n        .app-header {\n            background-color: var(--primary-navy);\n            color: white;\n            padding: 16px 32px;\n            display: flex;\n            justify-content: space-between;\n            align-items: center;\n            border-bottom: 4px solid var(--accent-gold);\n            box-shadow: 0 4px 12px rgba(0,0,0,0.1);\n            z-index: 10;\n        }\n\n        .brand h1 {\n            margin: 0;\n            font-family: 'Playfair Display', serif;\n            font-size: 1.5rem;\n            letter-spacing: 0.5px;\n        }\n\n        .brand span {\n            font-size: 0.85rem;\n            color: #b0c4de;\n            font-weight: 300;\n            font-family: 'Inter', sans-serif;\n            letter-spacing: normal;\n            margin-left: 12px;\n            padding-left: 12px;\n            border-left: 1px solid #4a5d7c;\n        }\n\n        .system-status {\n            font-size: 0.85rem;\n            display: flex;\n            align-items: center;\n            gap: 8px;\n        }\n\n        .status-dot {\n            width: 8px;\n            height: 8px;\n            background-color: #22c55e;\n            border-radius: 50%;\n            box-shadow: 0 0 8px #22c55e;\n        }\n\n        .app-main {\n            display: flex;\n            flex: 1;\n            overflow: hidden;\n            padding: 24px;\n            gap: 24px;\n            max-width: 1400px;\n            margin: 0 auto;\n            width: 100%;\n            box-sizing: border-box;\n        }\n\n        .chat-section {\n            flex: 2;\n            background: var(--bg-panel);\n            border-radius: 12px;\n            box-shadow: 0 8px 30px rgba(0,0,0,0.08);\n            display: flex;\n            flex-direction: column;\n            overflow: hidden;\n        }\n\n        .section-header {\n            padding: 20px 24px;\n            border-bottom: 1px solid var(--border-color);\n            background: var(--bg-panel);\n        }\n\n        .section-header h2 {\n            margin: 0;\n            font-size: 1.1rem;\n            font-weight: 600;\n            color: var(--primary-navy);\n        }\n\n        #chat-box { \n            flex: 1;\n            overflow-y: auto; \n            padding: 24px; \n            background-color: var(--bg-chat);\n            display: flex;\n            flex-direction: column;\n            gap: 16px;\n        }\n\n        .message { \n            padding: 14px 18px; \n            border-radius: 8px; \n            max-width: 80%; \n            font-size: 0.95rem;\n            line-height: 1.6;\n            word-wrap: break-word;\n            box-shadow: 0 2px 4px rgba(0,0,0,0.03);\n        }\n\n        .user-msg { \n            background: var(--secondary-navy); \n            color: white; \n            align-self: flex-end; \n            border-bottom-right-radius: 2px;\n        }\n\n        .bot-msg { \n            background: #ffffff; \n            color: var(--text-main); \n            border: 1px solid var(--border-color);\n            align-self: flex-start;\n            border-bottom-left-radius: 2px;\n        }\n\n        #input-container { \n            display: flex; \n            padding: 20px 24px; \n            background: var(--bg-panel);\n            border-top: 1px solid var(--border-color);\n        }\n\n        input[type=\"text\"] { \n            flex: 1; \n            padding: 14px 16px; \n            border: 1px solid var(--border-color); \n            border-radius: 6px; \n            font-size: 0.95rem;\n            font-family: 'Inter', sans-serif;\n            outline: none;\n            transition: border-color 0.2s ease, box-shadow 0.2s ease;\n        }\n\n        input[type=\"text\"]:focus {\n            border-color: var(--accent-gold);\n            box-shadow: 0 0 0 3px rgba(197, 164, 126, 0.15);\n        }\n\n        button { \n            margin-left: 16px;\n            padding: 14px 28px; \n            background: var(--accent-gold); \n            color: #ffffff; \n            border: none; \n            border-radius: 6px; \n            font-weight: 600;\n            font-size: 0.95rem;\n            font-family: 'Inter', sans-serif;\n            cursor: pointer; \n            transition: background 0.2s ease;\n        }\n\n        button:hover { background: var(--accent-gold-hover); }\n\n        .data-panel {\n            flex: 1;\n            background: var(--bg-panel);\n            border-radius: 12px;\n            box-shadow: 0 8px 30px rgba(0,0,0,0.08);\n            display: flex;\n            flex-direction: column;\n            overflow: hidden;\n            min-width: 320px;\n        }\n\n        .data-content {\n            padding: 24px;\n            overflow-y: auto;\n            flex: 1;\n        }\n\n        .data-group {\n            margin-bottom: 24px;\n        }\n\n        .data-group h3 {\n            font-size: 0.85rem;\n            text-transform: uppercase;\n            letter-spacing: 1px;\n            color: var(--text-muted);\n            margin: 0 0 12px 0;\n            font-weight: 600;\n            border-bottom: 1px solid var(--border-color);\n            padding-bottom: 8px;\n        }\n\n        .file-list {\n            list-style: none;\n            padding: 0;\n            margin: 0;\n        }\n\n        .file-list li {\n            display: flex;\n            align-items: center;\n            padding: 12px;\n            background: var(--bg-chat);\n            border: 1px solid var(--border-color);\n            margin-bottom: 8px;\n            border-radius: 6px;\n            font-size: 0.9rem;\n            color: var(--text-main);\n        }\n\n        .file-icon {\n            display: inline-block;\n            width: 24px;\n            height: 24px;\n            background: var(--secondary-navy);\n            color: white;\n            border-radius: 4px;\n            text-align: center;\n            line-height: 24px;\n            font-size: 0.7rem;\n            font-weight: bold;\n            margin-right: 12px;\n        }\n\n        .file-icon.pdf { background: #dc2626; }\n        .file-icon.doc { background: #2563eb; }\n\n        .file-details {\n            display: flex;\n            flex-direction: column;\n        }\n\n        .file-name { font-weight: 500; }\n        .file-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }\n\n        ::-webkit-scrollbar { width: 6px; }\n        ::-webkit-scrollbar-track { background: transparent; }\n        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }\n        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }\n        \n        .loading { font-style: italic; color: var(--text-muted); }\n    </style>\n</head>\n<body>\n\n<header class=\"app-header\">\n    <div class=\"brand\">\n        <h1>Legal Document Assistant <span>RAG Knowledge System</span></h1>\n    </div>\n    <div class=\"system-status\">\n        <div class=\"status-dot\"></div>\n        Vector Database: Connected (Pinecone)\n    </div>\n</header>\n\n<main class=\"app-main\">\n    \n    <section class=\"chat-section\">\n        <div class=\"section-header\">\n            <h2>Query Interface</h2>\n        </div>\n        <div id=\"chat-box\">\n            <div class=\"message bot-msg\">Welcome. I am connected to the Australian Law vector database. How can I assist you with your legal research today?</div>\n        </div>\n        <div id=\"input-container\">\n            <input type=\"text\" id=\"user-input\" placeholder=\"Ask a question about the uploaded legal documents...\" onkeypress=\"handleEnter(event)\">\n            <button onclick=\"sendMessage()\">Search</button>\n        </div>\n    </section>\n\n    <aside class=\"data-panel\">\n        <div class=\"section-header\">\n            <h2>System Context</h2>\n        </div>\n        <div class=\"data-content\">\n            \n            <div class=\"data-group\">\n                <h3>Ingested Documents</h3>\n                <ul class=\"file-list\">\n                    <li>\n                        <div class=\"file-icon pdf\">PDF</div>\n                        <div class=\"file-details\">\n                            <span class=\"file-name\">Australian Law.pdf</span>\n                            <span class=\"file-meta\">Indexed: Today, 08:30 AM • 452 Chunks</span>\n                        </div>\n                    </li>\n                </ul>\n            </div>\n\n            <div class=\"data-group\">\n                <h3>Retrieval Metrics</h3>\n                <ul class=\"file-list\" style=\"background: transparent; border: none; padding: 0;\">\n                    <li style=\"background: transparent; border: none; padding: 4px 0; display: flex; justify-content: space-between;\">\n                        <span style=\"color: var(--text-muted);\">Embedding Model:</span>\n                        <span style=\"font-weight: 500;\">text-embedding-3-small</span>\n                    </li>\n                    <li style=\"background: transparent; border: none; padding: 4px 0; display: flex; justify-content: space-between;\">\n                        <span style=\"color: var(--text-muted);\">Top-K Retrieval:</span>\n                        <span style=\"font-weight: 500;\">10 chunks</span>\n                    </li>\n                    <li style=\"background: transparent; border: none; padding: 4px 0; display: flex; justify-content: space-between;\">\n                        <span style=\"color: var(--text-muted);\">LLM Inference:</span>\n                        <span style=\"font-weight: 500;\">gpt-4o-mini</span>\n                    </li>\n                </ul>\n            </div>\n\n        </div>\n    </aside>\n\n</main>\n\n<script>\n    // --- REPLACE THIS WITH YOUR N8N PRODUCTION WEBHOOK URL ---\n    const N8N_WEBHOOK_URL = \"https://lance0567.app.n8n.cloud/webhook/legal-chat\";\n\n    // ✅ CHANGE 1: Generate a unique session ID when the page loads\n    const currentSessionId = \"session-\" + Math.random().toString(36).substring(2, 15);\n\n    async function sendMessage() {\n        const inputField = document.getElementById(\"user-input\");\n        const chatBox = document.getElementById(\"chat-box\");\n        const messageText = inputField.value.trim();\n\n        if (messageText === \"\") return;\n\n        chatBox.innerHTML += `<div class=\"message user-msg\">${messageText}</div>`;\n        inputField.value = \"\";\n        chatBox.scrollTop = chatBox.scrollHeight;\n\n        const loadingId = \"loading-\" + Date.now();\n        chatBox.innerHTML += `<div id=\"${loadingId}\" class=\"message bot-msg loading\">Retrieving context from Pinecone...</div>`;\n        chatBox.scrollTop = chatBox.scrollHeight;\n\n        try {\n            const response = await fetch(N8N_WEBHOOK_URL, {\n                method: \"POST\",\n                headers: {\n                    \"Content-Type\": \"application/json\"\n                },\n                // ✅ CHANGE 2: Send both message and sessionId in the payload\n                body: JSON.stringify({ \n                    message: messageText,\n                    sessionId: currentSessionId\n                }) \n            });\n\n            const data = await response.json();\n            \n            document.getElementById(loadingId).remove();\n\n            const botReply = data.output || data.text || \"Received empty response from server.\";\n            const formattedReply = botReply.replace(/\\n/g, '<br>');\n            \n            chatBox.innerHTML += `<div class=\"message bot-msg\">${formattedReply}</div>`;\n            \n        } catch (error) {\n            document.getElementById(loadingId).remove();\n            chatBox.innerHTML += `<div class=\"message bot-msg\" style=\"color: #dc2626;\">Error: Could not connect to the n8n backend.</div>`;\n            console.error(\"Webhook Error:\", error);\n        }\n\n        chatBox.scrollTop = chatBox.scrollHeight;\n    }\n\n    function handleEnter(event) {\n        if (event.key === \"Enter\") {\n            sendMessage();\n        }\n    }\n</script>\n\n</body>\n</html>",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3040,
+        160
+      ],
+      "id": "234adfa7-7362-4e52-9d10-7cc0551e2fd1",
+      "name": "Render UI"
+    },
+    {
+      "parameters": {
+        "content": "## Chat Interface",
+        "height": 768,
+        "width": 848,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2560,
+        -144
+      ],
+      "id": "ed3f4d1e-dcf7-49f2-ad0e-7e75e6e7be72",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        []
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "DB: Insert to Pinecone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "DB: Insert to Pinecone",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Retrieve Context": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agent: RAG Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory: Chat History": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agent: RAG Orchestrator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model: Embed User Query": {
+      "ai_embedding": [
+        [
+          {
+            "node": "DB: Retrieve Context",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent: RAG Orchestrator": {
+      "main": [
+        []
+      ]
+    },
+    "Fetch: Raw Documents": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process: Parse Text": {
+      "ai_document": [
+        [
+          {
+            "node": "DB: Insert to Pinecone",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split: 1000 Chunks / 100 Overlap": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Process: Parse Text",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DB: Insert to Pinecone": {
+      "main": [
+        [
+          {
+            "node": "Notify: Slack Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "API: Check Vector Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: Clear Pinecone Index": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Fetch: Raw Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: Check Vector Count": {
+      "main": [
+        [
+          {
+            "node": "Logic: Has Existing Records?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logic: Has Existing Records?": {
+      "main": [
+        [
+          {
+            "node": "API: Clear Pinecone Index",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch: Raw Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify: Slack Update": {
+      "main": [
+        []
+      ]
+    },
+    "LLM: gpt-4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent: RAG Orchestrator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Agent: RAG Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch UI Webhook": {
+      "main": [
+        [
+          {
+            "node": "Render UI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "71a6c27c-8bc4-4973-9ff8-a899b8ad9217",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "bd29a8c48303fcba96af5951379b38b77fbeaad88b300cccfd62386b1b2ee723"
+  },
+  "id": "06tpMW739R4nvNi5",
+  "tags": []
+}
