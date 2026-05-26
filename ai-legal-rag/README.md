@@ -4,7 +4,7 @@ A self-contained RAG (Retrieval-Augmented Generation) application built entirely
 
 No external app framework required. The entire frontend is served directly from n8n via a webhook.
 
-![Workflow](../assets/images/legal-chat-interface/workflow.png)
+![Workflow](../assets/images/ai-legal-rag/workflow.png)
 
 ---
 
